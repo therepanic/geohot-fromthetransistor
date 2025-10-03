@@ -12,6 +12,7 @@ input rx, output rdy, input rdy_clr);
     receiver uart_receiver(
         .rx(rx),
         .clk(rx_clk),
+        .clk50(clk50),
         .dout(dout),
         .rdy(rdy),
         .rdy_clr(rdy_clr)
@@ -21,6 +22,7 @@ input rx, output rdy, input rdy_clr);
         .din(din),
         .write_en(write_en),
         .clk(tx_clk),
+        .clk50(clk50),
         .tx(tx),
         .tx_busy(tx_busy)
     );

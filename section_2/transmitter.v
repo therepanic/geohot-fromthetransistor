@@ -1,7 +1,7 @@
 module transmitter
 # (parameter IDLE_STATE = 2'b00, parameter START_STATE = 2'b01, parameter DATA_STATE = 2'b10,
 parameter STOP_STATE = 2'b11)
-(input[7:0] din, input write_en, input clk, output reg tx, output tx_busy);
+(input[7:0] din, input write_en, input clk, input clk50, output reg tx, output tx_busy);
 
 initial begin
     tx = 1;
@@ -13,7 +13,7 @@ reg[1:0] state = IDLE_STATE;
 
 assign tx_busy = (state != IDLE_STATE);
 
-always @(posedge clk) begin
+always @(posedge clk50) begin
     case (state)
         IDLE_STATE: begin
             if (write_en) begin
@@ -23,20 +23,26 @@ always @(posedge clk) begin
             end           
         end
         START_STATE: begin
-            tx <= 0;
-            state <= DATA_STATE;
+            if (clk) begin
+                tx <= 0;
+                state <= DATA_STATE;
+            end
         end
         DATA_STATE : begin
+            if (clk) begin
              if (bitpos == 7) begin
                     state <= STOP_STATE;
                 end else begin
                     bitpos <= bitpos + 1;
                 end
             tx <= data[bitpos];
+            end
         end
         STOP_STATE: begin
-            tx <= 1;
-            state <= IDLE_STATE;
+            if (clk) begin
+                tx <= 1;
+                state <= IDLE_STATE;
+            end
         end
         default: begin
             state <= IDLE_STATE;

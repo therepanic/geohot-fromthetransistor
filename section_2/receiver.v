@@ -1,6 +1,6 @@
 module receiver
 # (parameter START_STATE = 2'b00, parameter DATA_STATE = 2'b01, parameter STOP_STATE = 2'b11)
-(input rx, input clk, output reg[7:0] dout, output reg rdy, input rdy_clr);
+(input rx, input clk, input clk50, output reg[7:0] dout, output reg rdy, input rdy_clr);
 
 initial begin
     rdy <= 0;
@@ -12,11 +12,12 @@ reg[3:0] bitpos = 0;
 reg[7:0] temp_data = 0;
 reg[1:0] state = START_STATE;
 
-always @(posedge clk) begin
-    if (rdy_clr)
+always @(posedge clk50) begin
+    if (rdy_clr) begin
         rdy <= 0;
-    
-    case (state)
+    end
+    if (clk) begin
+        case (state)
         START_STATE: begin
             if (!rx || sample != 0) begin
                 sample <= sample + 1;
@@ -51,7 +52,8 @@ always @(posedge clk) begin
         default: begin
             state <= START_STATE;
         end
-    endcase
+        endcase
+    end
 end
 
 endmodule
