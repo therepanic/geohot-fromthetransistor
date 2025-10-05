@@ -27,6 +27,12 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             Map.entry("MVN", 0b1111)
     );
 
+    public static void main(String[] args) {
+        System.out.println(Integer.toHexString(new ARM7DataProcessingParser().parse(
+                new String[] {"mov", "r1,", "#1,", "lsl #8"}
+        ).getBit()));
+    }
+
     @Override
     public Instruction parse(String[] entry) {
         List<String> tokens = Arrays.stream(entry)
@@ -104,10 +110,22 @@ public class ARM7DataProcessingParser extends ARM7Parser {
     }
 
     private int parseReg(String token) {
-        return Integer.parseInt(token.replaceAll("[^0-9]", ""));
+        if (token.equals("SP")) {
+            return 13;
+        }
+        if (token.equals("LR")) {
+            return 14;
+        }
+        if (token.equals("PC")) {
+            return 15;
+        }
+        String digits = token.replaceAll("[^0-9]", "");
+        return Integer.parseInt(digits);
     }
 
-    private boolean isShift(String s) { return "LSL".equals(s) || "LSR".equals(s) || "ASR".equals(s) || "ROR".equals(s); }
+    private boolean isShift(String s) {
+        return "LSL".equals(s) || "LSR".equals(s) || "ASR".equals(s) || "ROR".equals(s);
+    }
 
     private int shiftCode(String s) {
         return switch (s) {
