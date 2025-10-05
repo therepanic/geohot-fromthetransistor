@@ -27,12 +27,6 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             Map.entry("MVN", 0b1111)
     );
 
-    public static void main(String[] args) {
-        System.out.println(Integer.toHexString(new ARM7DataProcessingParser().parse(
-                new String[] {"mov", "r1,", "#1,", "lsl #8"}
-        ).getBit()));
-    }
-
     @Override
     public Instruction parse(String[] entry) {
         List<String> tokens = Arrays.stream(entry)
@@ -94,8 +88,19 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                     //optional shift
                     if (tokens.size() > 5 && isShift(tokens.get(4))) {
                         int sc = shiftCode(tokens.get(4));
-                        int sh = Integer.parseInt(tokens.get(5).replace("#", "")) & 0x1F;
-                        op2 = (sh << 7) | (sc << 5) | (rm & 0xF);
+                        int sh;
+                        if (tokens.get(5).startsWith("#")) {
+                            //shift by immediate
+                            sh = Integer.parseInt(tokens.get(5).replace("#", "")) & 0x1F;
+                            op2 = (sh << 7) | (sc << 5) | (rm & 0xF);
+                        } else if ("RRX".equals(tokens.get(5))) {
+                            //edge case
+                            op2 = (0b11 << 5) | (rm & 0xF);
+                        } else {
+                            //shift by reg
+                            int rs = parseReg(tokens.get(5));
+                            op2 = (rs << 8) | (sc << 5) | (1 << 4) | (rm & 0xF);
+                        }
                     } else {
                         op2 = rm & 0xF;
                     }
