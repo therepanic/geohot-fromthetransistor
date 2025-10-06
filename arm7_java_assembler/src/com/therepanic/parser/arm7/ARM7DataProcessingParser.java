@@ -82,10 +82,11 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                 if (s.startsWith("#")) {
                     String numStr = s.substring(1);
                     if (numStr.startsWith("0x")) {
-                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                        op2 = Integer.parseInt(numStr.substring(2), 16);
                     } else {
-                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                        op2 = Integer.parseInt(numStr, 10);
                     }
+                    op2 = encodeImmediate(op2);
                     imm = true;
                 } else {
                     op2 = parseReg(s);
@@ -100,10 +101,11 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                 if (s.startsWith("#")) {
                     String numStr = s.substring(1);
                     if (numStr.startsWith("0x")) {
-                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                        op2 = Integer.parseInt(numStr.substring(2), 16);
                     } else {
-                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                        op2 = Integer.parseInt(numStr, 10);
                     }
+                    op2 = encodeImmediate(op2);
                     imm = true;
                 } else {
                     op2 = parseReg(s);
@@ -121,10 +123,11 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                 if (s.startsWith("#")) {
                     String numStr = s.substring(1);
                     if (numStr.startsWith("0x")) {
-                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                        op2 = Integer.parseInt(numStr.substring(2), 16);
                     } else {
-                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                        op2 = Integer.parseInt(numStr, 10);
                     }
+                    op2 = encodeImmediate(op2);
                     imm = true;
                 } else {
                     int rm = parseReg(s);
@@ -160,6 +163,18 @@ public class ARM7DataProcessingParser extends ARM7Parser {
         instruction |= (rd & 0xF) << 12;
         instruction |= op2 & 0xFFF;
         return new Instruction(instruction);
+    }
+
+    public int encodeImmediate(int value) {
+        for (int rotate = 0; rotate < 32; rotate += 2) {
+            int rotated = Integer.rotateRight(value, rotate);
+            if ((rotated & 0xFFFFFF00) == 0) {
+                int imm8 = rotated & 0xFF;
+                int rotateImm = rotate / 2;
+                return (rotateImm << 8) | imm8;
+            }
+        }
+        throw new IllegalArgumentException("Not correct immediate");
     }
 
     private int parseReg(String token) {
