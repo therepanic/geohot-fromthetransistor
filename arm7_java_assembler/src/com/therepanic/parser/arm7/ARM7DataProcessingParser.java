@@ -2,7 +2,6 @@ package com.therepanic.parser.arm7;
 
 import com.therepanic.Instruction;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -28,16 +27,11 @@ public class ARM7DataProcessingParser extends ARM7Parser {
     );
 
     @Override
-    public Instruction parse(String[] entry) {
-        List<String> tokens = Arrays.stream(entry)
-                .map(t -> t.replace(",", "").trim())
-                .filter(t -> !t.isEmpty())
-                .map(String::toUpperCase)
-                .toList();
+    public Instruction parse(List<String> tokens) {
         String op = tokens.getFirst();
         int instruction = 0;
         instruction |= 0b1110 << 28;
-        instruction |= (OP_CODES.get(op) & 0b1111) << 21;
+        instruction |= OP_CODES.get(op) << 21;
         if ("CMP".equals(op) || "CMN".equals(op) || "TST".equals(op) || "TEQ".equals(op)) {
             instruction |= 1 << 20;
         } else {
