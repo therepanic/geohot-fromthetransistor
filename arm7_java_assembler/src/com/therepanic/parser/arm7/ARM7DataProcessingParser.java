@@ -80,7 +80,12 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             if (tokens.size() > 2) {
                 String s = tokens.get(2);
                 if (s.startsWith("#")) {
-                    op2 = Integer.parseInt(s.substring(1)) & 0xFF;
+                    String numStr = s.substring(1);
+                    if (numStr.startsWith("0x")) {
+                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                    } else {
+                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                    }
                     imm = true;
                 } else {
                     op2 = parseReg(s);
@@ -93,7 +98,12 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             if (tokens.size() > 2) {
                 String s = tokens.get(2);
                 if (s.startsWith("#")) {
-                    op2 = Integer.parseInt(s.substring(1)) & 0xFF;
+                    String numStr = s.substring(1);
+                    if (numStr.startsWith("0x")) {
+                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                    } else {
+                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                    }
                     imm = true;
                 } else {
                     op2 = parseReg(s);
@@ -109,7 +119,12 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             if (tokens.size() > 3) {
                 String s = tokens.get(3);
                 if (s.startsWith("#")) {
-                    op2 = Integer.parseInt(s.substring(1)) & 0xFF;
+                    String numStr = s.substring(1);
+                    if (numStr.startsWith("0x")) {
+                        op2 = Integer.parseInt(numStr.substring(2), 16) & 0xFF;
+                    } else {
+                        op2 = Integer.parseInt(numStr, 10) & 0xFF;
+                    }
                     imm = true;
                 } else {
                     int rm = parseReg(s);
@@ -119,7 +134,12 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                         int sh;
                         if (tokens.get(5).startsWith("#")) {
                             //shift by immediate
-                            sh = Integer.parseInt(tokens.get(5).replace("#", "")) & 0x1F;
+                            String numStr = tokens.get(5).replace("#", "");
+                            if (numStr.startsWith("0x")) {
+                                sh = Integer.parseInt(numStr.substring(2), 16) & 0x1F;
+                            } else {
+                                sh = Integer.parseInt(numStr, 10) & 0x1F;
+                            }
                             op2 = (sh << 7) | (sc << 5) | (rm & 0xF);
                         } else if ("RRX".equals(tokens.get(5))) {
                             //edge case
