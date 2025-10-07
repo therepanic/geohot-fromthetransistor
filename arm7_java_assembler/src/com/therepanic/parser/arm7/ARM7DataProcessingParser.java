@@ -43,6 +43,9 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             Map.entry("LE", 0b1101)
     );
 
+    public ARM7DataProcessingParser() {
+    }
+
     @Override
     public Instruction parse(List<String> tokens) {
         String op = tokens.getFirst();
@@ -165,7 +168,7 @@ public class ARM7DataProcessingParser extends ARM7Parser {
         return new Instruction(instruction);
     }
 
-    public int encodeImmediate(int value) {
+    private int encodeImmediate(int value) {
         for (int rotate = 0; rotate < 32; rotate += 2) {
             int rotated = Integer.rotateRight(value, rotate);
             if ((rotated & 0xFFFFFF00) == 0) {
