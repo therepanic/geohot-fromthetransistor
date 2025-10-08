@@ -4,6 +4,7 @@ import com.therepanic.Instruction;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ARM7DataProcessingParser extends ARM7Parser {
 
@@ -166,6 +167,11 @@ public class ARM7DataProcessingParser extends ARM7Parser {
         instruction |= (rd & 0xF) << 12;
         instruction |= op2 & 0xFFF;
         return new Instruction(instruction);
+    }
+
+    @Override
+    public Set<String> supportedOpcodes() {
+        return OP_CODES.keySet();
     }
 
     private int encodeImmediate(int value) {

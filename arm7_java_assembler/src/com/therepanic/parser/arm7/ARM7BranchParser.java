@@ -4,8 +4,9 @@ import com.therepanic.Instruction;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public class ARM7BranchParser extends ARM7Parser {
+public class ARM7BranchParser  extends ARM7Parser {
 
     private Map<String, Integer> labelAddressMap;
 
@@ -65,11 +66,16 @@ public class ARM7BranchParser extends ARM7Parser {
         return new Instruction(instruction);
     }
 
-    private int calculateBranchOffset(int currentAddress, int targetAddress) {
-        int pc = currentAddress + 8;
-        int rawOffset = targetAddress - pc;
-        int shiftedOffset = rawOffset >> 2;
-        return shiftedOffset & 0x00FFFFFF;
+    @Override
+    public Set<String> supportedOpcodes() {
+        return Set.of("B", "BL");
+    }
+
+    private int calculateBranchOffset(int currentByteAddr, int targetByteAddr) {
+        int pc = currentByteAddr + 8;
+        int rawOffset = targetByteAddr - pc;
+        int imm24 = rawOffset >> 2;
+        return imm24 & 0x00FFFFFF;
     }
 
     public Map<String, Integer> getLabelAddressMap() {
