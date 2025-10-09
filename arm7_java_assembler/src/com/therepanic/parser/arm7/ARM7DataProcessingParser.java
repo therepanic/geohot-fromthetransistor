@@ -70,14 +70,14 @@ public class ARM7DataProcessingParser extends ARM7Parser {
         int instruction = 0;
         instruction |= condCode << 28;
         instruction |= opCode << 21;
-        if ("CMP".equals(op) || "CMN".equals(op) || "TST".equals(op) || "TEQ".equals(op)) {
+        if (op.startsWith("CMP") || op.startsWith("CMN") || op.startsWith("TST") || op.startsWith("TEQ")) {
             instruction |= 1 << 20;
         } else {
             instruction |= 0 << 20;
         }
         int rd = 0, rn = 0, op2 = 0;
         boolean imm = false;
-        if ("MOV".equals(op) || "MVN".equals(op)) {
+        if (op.startsWith("MOV") || op.startsWith("MVN")) {
             if (tokens.size() > 1) {
                 rd = parseReg(tokens.get(1));
             }
