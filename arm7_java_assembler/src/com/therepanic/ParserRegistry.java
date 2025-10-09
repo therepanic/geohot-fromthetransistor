@@ -3,6 +3,7 @@ package com.therepanic;
 import com.therepanic.parser.Parser;
 import com.therepanic.parser.arm7.ARM7BranchParser;
 import com.therepanic.parser.arm7.ARM7DataProcessingParser;
+import com.therepanic.parser.arm7.ARM7MulMlaParser;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ public class ParserRegistry {
     static {
         registerFactory(ARM7BranchParser::new);
         registerFactory(ARM7DataProcessingParser::new);
+        registerFactory(ARM7MulMlaParser::new);
     }
 
     public static void registerFactory(Supplier<? extends Parser> factory) {

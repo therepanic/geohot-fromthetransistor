@@ -85,7 +85,7 @@ public class ARM7DataProcessingParser extends ARM7Parser {
                 String s = tokens.get(2);
                 if (s.startsWith("#")) {
                     String numStr = s.substring(1);
-                    if (numStr.startsWith("0x")) {
+                    if (numStr.startsWith("0X")) {
                         op2 = Integer.parseInt(numStr.substring(2), 16);
                     } else {
                         op2 = Integer.parseInt(numStr, 10);
@@ -187,14 +187,16 @@ public class ARM7DataProcessingParser extends ARM7Parser {
     }
 
     private int parseReg(String token) {
-        if (token.equals("SP")) {
-            return 13;
-        }
-        if (token.equals("LR")) {
-            return 14;
-        }
-        if (token.equals("PC")) {
-            return 15;
+        switch (token) {
+            case "SP" -> {
+                return 13;
+            }
+            case "LR" -> {
+                return 14;
+            }
+            case "PC" -> {
+                return 15;
+            }
         }
         String digits = token.replaceAll("[^0-9]", "");
         return Integer.parseInt(digits);
