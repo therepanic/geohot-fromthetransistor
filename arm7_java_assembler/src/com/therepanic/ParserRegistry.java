@@ -17,6 +17,7 @@ public class ParserRegistry {
         registerFactory(ARM7MulMlaParser::new);
         registerFactory(ARM7MullMlalParser::new);
         registerFactory(ARM7SingleDataSwapParser::new);
+        registerFactory(ARM7SoftwareInterruptParser::new);
     }
 
     public static void registerFactory(Supplier<? extends Parser> factory) {
