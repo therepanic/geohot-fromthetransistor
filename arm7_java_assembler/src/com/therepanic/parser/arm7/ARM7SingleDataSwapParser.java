@@ -3,6 +3,7 @@ package com.therepanic.parser.arm7;
 import com.therepanic.Instruction;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -53,6 +54,7 @@ public class ARM7SingleDataSwapParser extends ARM7Parser {
     }
 
     private int parseReg(String token) {
+        token = token.toUpperCase().trim();
         switch (token) {
             case "SP" -> {
                 return 13;

@@ -47,6 +47,7 @@ public class ARM7MulMlaParser extends ARM7Parser {
     }
 
     private int parseReg(String token) {
+        token = token.toUpperCase().trim();
         switch (token) {
             case "SP" -> {
                 return 13;
