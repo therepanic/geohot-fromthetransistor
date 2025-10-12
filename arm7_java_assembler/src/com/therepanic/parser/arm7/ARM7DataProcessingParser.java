@@ -27,23 +27,6 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             Map.entry("MVN", 0b1111)
     );
 
-    private static final Map<String, Integer> COND_CODES = Map.ofEntries(
-            Map.entry("EQ", 0b0000),
-            Map.entry("NE", 0b0001),
-            Map.entry("CS", 0b0010),
-            Map.entry("CC", 0b0011),
-            Map.entry("MI", 0b0100),
-            Map.entry("PL", 0b0101),
-            Map.entry("VS", 0b0110),
-            Map.entry("VC", 0b0111),
-            Map.entry("HI", 0b1000),
-            Map.entry("LS", 0b1001),
-            Map.entry("GE", 0b1010),
-            Map.entry("LT", 0b1011),
-            Map.entry("GT", 0b1100),
-            Map.entry("LE", 0b1101)
-    );
-
     public ARM7DataProcessingParser() {
     }
 
@@ -53,7 +36,7 @@ public class ARM7DataProcessingParser extends ARM7Parser {
         int opCode = OP_CODES.get(op.substring(0, 3));
         int condCode;
         if (op.length() > 3) {
-            condCode = COND_CODES.get(op.substring(3));
+            condCode = getConditionCode(op.substring(3));
         } else {
             //AL cond code
             condCode = 0b1110;
@@ -62,7 +45,7 @@ public class ARM7DataProcessingParser extends ARM7Parser {
             if (op.startsWith(opCodeEntry.getKey())) {
                 opCode = opCodeEntry.getValue();
                 if (op.length() > 3) {
-                    condCode = COND_CODES.get(op.substring(3));
+                    condCode = getConditionCode(op.substring(3));
                 }
                 break;
             }
