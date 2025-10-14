@@ -1,6 +1,6 @@
 package com.therepanic.registerFile;
 
-public enum Mode {
+public enum ARM7Mode {
     USER,
     FIQ,
     IRQ,
