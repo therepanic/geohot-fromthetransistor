@@ -11,10 +11,10 @@ public abstract class Unit {
     }
 
     protected boolean checkCondition(UnitCondition cond) {
-        boolean N = registerFile.getFlagN();
-        boolean Z = registerFile.getFlagZ();
-        boolean C = registerFile.getFlagC();
-        boolean V = registerFile.getFlagV();
+        boolean N = this.registerFile.getFlagN();
+        boolean Z = this.registerFile.getFlagZ();
+        boolean C = this.registerFile.getFlagC();
+        boolean V = this.registerFile.getFlagV();
         return switch (cond) {
             case EQ -> Z;
             case NE -> !Z;
