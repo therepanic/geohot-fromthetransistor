@@ -2,7 +2,7 @@ package com.therepanic.registerFile;
 
 import java.util.Map;
 
-public interface ARM7RegisterFile {
+public interface RegisterFile {
 
     int read(int reg);
 
@@ -32,11 +32,11 @@ public interface ARM7RegisterFile {
 
     int getCPSR();
 
-    Map<ARM7Mode, Integer> getSPSR();
+    Map<Mode, Integer> getSPSR();
 
     void setCPSR(int value);
 
     void setFlagsFromResult(int result, boolean carry, boolean overflow);
 
-    ARM7Mode getCurrentMode();
+    Mode getCurrentMode();
 }

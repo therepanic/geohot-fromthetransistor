@@ -1,12 +1,12 @@
 package com.therepanic.unit.alu;
 
-import com.therepanic.registerFile.ARM7RegisterFile;
+import com.therepanic.registerFile.RegisterFile;
 import com.therepanic.unit.Unit;
 import com.therepanic.unit.UnitCondition;
 
 public class DefaultArithmeticLogicUnit extends Unit implements ArithmeticLogicUnit {
 
-    public DefaultArithmeticLogicUnit(ARM7RegisterFile registerFile) {
+    public DefaultArithmeticLogicUnit(RegisterFile registerFile) {
         super(registerFile);
     }
 

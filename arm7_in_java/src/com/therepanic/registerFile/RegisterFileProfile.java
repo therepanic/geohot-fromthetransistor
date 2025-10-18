@@ -1,12 +1,12 @@
 package com.therepanic.registerFile;
 
-public class ARM7RegisterFileProfile {
+public class RegisterFileProfile {
 
     private int sp;
 
     private int lr;
 
-    public ARM7RegisterFileProfile(int sp, int lr) {
+    public RegisterFileProfile(int sp, int lr) {
         this.sp = sp;
         this.lr = lr;
     }

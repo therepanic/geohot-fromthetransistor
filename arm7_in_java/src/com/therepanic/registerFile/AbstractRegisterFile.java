@@ -1,6 +1,6 @@
 package com.therepanic.registerFile;
 
-public abstract class AbstractARM7RegisterFile implements ARM7RegisterFile {
+public abstract class AbstractRegisterFile implements RegisterFile {
 
     protected static final int FLAG_N = 1 << 31;
 

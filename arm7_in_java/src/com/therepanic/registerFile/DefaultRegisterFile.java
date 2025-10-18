@@ -3,7 +3,7 @@ package com.therepanic.registerFile;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
+public class DefaultRegisterFile extends AbstractRegisterFile {
 
     private final int[] registers = new int[13];
 
@@ -11,31 +11,31 @@ public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
 
     private int cpsr;
 
-    private final Map<ARM7Mode, ARM7RegisterFileProfile> registerFileProfiles = new EnumMap<>(ARM7Mode.class);
+    private final Map<Mode, RegisterFileProfile> registerFileProfiles = new EnumMap<>(Mode.class);
 
-    private final Map<ARM7Mode, Integer> spsr = new EnumMap<>(ARM7Mode.class);
+    private final Map<Mode, Integer> spsr = new EnumMap<>(Mode.class);
 
-    public DefaultARM7RegisterFile() {
-        ARM7RegisterFileProfile all = new ARM7RegisterFileProfile(0, 0);
-        this.registerFileProfiles.put(ARM7Mode.USER, all);
-        this.registerFileProfiles.put(ARM7Mode.SYS, all);
-        this.registerFileProfiles.put(ARM7Mode.FIQ, new FiqARM7RegisterFileProfile(0, 0));
-        this.registerFileProfiles.put(ARM7Mode.IRQ, new ARM7RegisterFileProfile(0, 0));
-        this.registerFileProfiles.put(ARM7Mode.SVC, new ARM7RegisterFileProfile(0, 0));
-        this.registerFileProfiles.put(ARM7Mode.ABT, new ARM7RegisterFileProfile(0, 0));
-        this.registerFileProfiles.put(ARM7Mode.UND, new ARM7RegisterFileProfile(0, 0));
+    public DefaultRegisterFile() {
+        RegisterFileProfile all = new RegisterFileProfile(0, 0);
+        this.registerFileProfiles.put(Mode.USER, all);
+        this.registerFileProfiles.put(Mode.SYS, all);
+        this.registerFileProfiles.put(Mode.FIQ, new FiqRegisterFileProfile(0, 0));
+        this.registerFileProfiles.put(Mode.IRQ, new RegisterFileProfile(0, 0));
+        this.registerFileProfiles.put(Mode.SVC, new RegisterFileProfile(0, 0));
+        this.registerFileProfiles.put(Mode.ABT, new RegisterFileProfile(0, 0));
+        this.registerFileProfiles.put(Mode.UND, new RegisterFileProfile(0, 0));
 
-        this.spsr.put(ARM7Mode.FIQ, 0);
-        this.spsr.put(ARM7Mode.IRQ, 0);
-        this.spsr.put(ARM7Mode.SVC, 0);
-        this.spsr.put(ARM7Mode.ABT, 0);
-        this.spsr.put(ARM7Mode.UND, 0);
+        this.spsr.put(Mode.FIQ, 0);
+        this.spsr.put(Mode.IRQ, 0);
+        this.spsr.put(Mode.SVC, 0);
+        this.spsr.put(Mode.ABT, 0);
+        this.spsr.put(Mode.UND, 0);
     }
 
     @Override
     public int read(int reg) {
-        if (getMode().equals(ARM7Mode.FIQ) && reg >= 8 && reg <= 12) {
-            FiqARM7RegisterFileProfile profile = (FiqARM7RegisterFileProfile)
+        if (getMode().equals(Mode.FIQ) && reg >= 8 && reg <= 12) {
+            FiqRegisterFileProfile profile = (FiqRegisterFileProfile)
                     this.registerFileProfiles.get(getMode());
             return profile.getRegisters()[reg - 8];
         }
@@ -44,8 +44,8 @@ public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
 
     @Override
     public void write(int reg, int value, boolean restoreFromSPSR) {
-        if (getMode().equals(ARM7Mode.FIQ) && reg >= 8 && reg <= 12) {
-            FiqARM7RegisterFileProfile profile = (FiqARM7RegisterFileProfile)
+        if (getMode().equals(Mode.FIQ) && reg >= 8 && reg <= 12) {
+            FiqRegisterFileProfile profile = (FiqRegisterFileProfile)
                     this.registerFileProfiles.get(getMode());
             profile.getRegisters()[reg - 8] = value;
             return;
@@ -118,7 +118,7 @@ public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
     }
 
     @Override
-    public Map<ARM7Mode, Integer> getSPSR() {
+    public Map<Mode, Integer> getSPSR() {
         return this.spsr;
     }
 
@@ -136,7 +136,7 @@ public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
     }
 
     @Override
-    public ARM7Mode getCurrentMode() {
+    public Mode getCurrentMode() {
         return getMode();
     }
 
@@ -177,16 +177,16 @@ public class DefaultARM7RegisterFile extends AbstractARM7RegisterFile {
         this.pc = effective;
     }
 
-    private ARM7Mode getMode() {
+    private Mode getMode() {
         int modeBits = this.cpsr & 0b11111;
         return switch (modeBits) {
-            case 0b10000 -> ARM7Mode.USER;
-            case 0b10001 -> ARM7Mode.FIQ;
-            case 0b10010 -> ARM7Mode.IRQ;
-            case 0b10011 -> ARM7Mode.SVC;
-            case 0b10111 -> ARM7Mode.ABT;
-            case 0b11011 -> ARM7Mode.UND;
-            case 0b11111 -> ARM7Mode.SYS;
+            case 0b10000 -> Mode.USER;
+            case 0b10001 -> Mode.FIQ;
+            case 0b10010 -> Mode.IRQ;
+            case 0b10011 -> Mode.SVC;
+            case 0b10111 -> Mode.ABT;
+            case 0b11011 -> Mode.UND;
+            case 0b11111 -> Mode.SYS;
             default -> throw new IllegalStateException("Unknown mode: " + modeBits);
         };
     }

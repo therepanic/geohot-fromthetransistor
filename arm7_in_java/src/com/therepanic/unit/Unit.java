@@ -1,12 +1,12 @@
 package com.therepanic.unit;
 
-import com.therepanic.registerFile.ARM7RegisterFile;
+import com.therepanic.registerFile.RegisterFile;
 
 public abstract class Unit {
 
-    protected final ARM7RegisterFile registerFile;
+    protected final RegisterFile registerFile;
 
-    public Unit(ARM7RegisterFile registerFile) {
+    public Unit(RegisterFile registerFile) {
         this.registerFile = registerFile;
     }
 
