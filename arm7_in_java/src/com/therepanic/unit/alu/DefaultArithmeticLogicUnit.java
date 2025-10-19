@@ -15,6 +15,7 @@ public class DefaultArithmeticLogicUnit extends Unit implements ArithmeticLogicU
     public void execute(UnitCondition condition, DataProcessingOperation operation, int rn, int rd, int operand2, boolean immediate, boolean s) {
         if (!checkCondition(condition)) return;
         int op1 = (operation == DataProcessingOperation.MOV) ? 0 : this.registerFile.read(rn);
+        // todo: rotate for immediate and shift for registers
         int op2 = immediate ? operand2 : this.registerFile.read(operand2);
         boolean oldC = this.registerFile.getFlagC();
         int result;
