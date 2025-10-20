@@ -15,5 +15,5 @@ public enum UnitCondition {
     LT,
     GT,
     LE,
-    ALL
+    AL
 }

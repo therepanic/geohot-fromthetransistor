@@ -30,7 +30,7 @@ public abstract class Unit {
             case LT -> N != V;
             case GT -> !Z && (N == V);
             case LE -> Z || (N != V);
-            case ALL -> true;
+            case AL -> true;
         };
     }
 
