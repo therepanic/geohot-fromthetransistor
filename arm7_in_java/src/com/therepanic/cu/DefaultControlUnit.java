@@ -1,6 +1,7 @@
 package com.therepanic.cu;
 
 import com.therepanic.dataMemory.SRamDataMemory;
+import com.therepanic.instructionMemory.InstructionMemory;
 import com.therepanic.registerFile.RegisterFile;
 import com.therepanic.unit.UnitCondition;
 import com.therepanic.unit.alu.ArithmeticLogicUnit;
@@ -41,20 +42,34 @@ public class DefaultControlUnit implements ControlUnit {
             Map.entry(0b1101, "MOV")
     );
 
+    private final InstructionMemory instructionMemory;
+
+    private final RegisterFile registerFile;
+
     private final ArithmeticLogicUnit alu;
 
     private final BranchLogicUnit blu;
 
     private final SingleDataTransferUnit sdt;
 
-    public DefaultControlUnit(RegisterFile registerFile, SRamDataMemory dataMemory) {
+    public DefaultControlUnit(InstructionMemory instructionMemory, RegisterFile registerFile, SRamDataMemory dataMemory) {
+        this.instructionMemory = instructionMemory;
+        this.registerFile = registerFile;
         this.alu = new DefaultArithmeticLogicUnit(registerFile);
         this.blu = new DefaultBranchLogicUnit(registerFile);
         this.sdt = new DefaultSingleDataTransferUnit(registerFile, dataMemory);
     }
 
     @Override
-    public void handle(int instruction) {
+    public int fetch() {
+        int pc = this.registerFile.read(15);
+        int instr = this.instructionMemory.readInstruction(pc);
+        this.registerFile.write(15, pc + 4, false);
+        return instr;
+    }
+
+    @Override
+    public void decodeAndExecute(int instruction) {
         int typeBits = (instruction >>> 25) & 0b111;
         switch (typeBits) {
             case 0b000, 0b001 -> {

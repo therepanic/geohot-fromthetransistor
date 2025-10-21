@@ -2,6 +2,9 @@ package com.therepanic.cu;
 
 public interface ControlUnit {
 
-    void handle(int instruction);
+    int fetch();
+
+    //it's a two-pipeline, not a three-pipeline, but it's not very easy to release at a high level.
+    void decodeAndExecute(int instruction);
 
 }

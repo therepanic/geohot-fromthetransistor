@@ -166,6 +166,7 @@ public class DefaultRegisterFile extends AbstractRegisterFile {
     }
 
     private void writePC(int value, boolean restoreFromSPSR) {
+        //for sure
         int effective = value & ~3;
         //note: we not support thumb now
         if (restoreFromSPSR) {

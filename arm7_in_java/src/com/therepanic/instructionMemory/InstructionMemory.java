@@ -4,7 +4,7 @@ public interface InstructionMemory {
 
     void addInstruction(int bit);
 
-    int readInstruction(int i);
+    int readInstruction(int pc);
 
     int size();
 

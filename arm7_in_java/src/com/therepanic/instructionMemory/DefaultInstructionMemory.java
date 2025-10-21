@@ -8,15 +8,15 @@ public class DefaultInstructionMemory extends AbstractInstructionMemory {
     @Override
     public void addInstruction(int bit) {
         if (this.pointer == this.memory.length - 1) {
-            throw new RuntimeException("Not enough instruction memory");
+            throw new RuntimeException("Not enough memory");
         }
         this.memory[this.pointer] = bit;
         this.pointer++;
     }
 
     @Override
-    public int readInstruction(int i) {
-        return this.memory[i];
+    public int readInstruction(int pc) {
+        return this.memory[pc / 4];
     }
 
     @Override
