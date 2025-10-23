@@ -34,7 +34,7 @@ module test_data_memory();
     parameter CLK_PERIOD = 10;
     initial begin
         clk = 1'b0;
-        forever #(CLK_PERIOD/2) clk = ~clk;
+        forever #(CLK_PERIOD / 2) clk = ~clk;
     end
 
     initial begin
@@ -44,20 +44,20 @@ module test_data_memory();
         write_word_data = 0; write_byte_data = 0;
         read_word_address = 0; read_byte_address = 0;
         $display("--- Running tests for ARM7 data memory");
-        # (2 * CLK_PERIOD);
+         @(posedge clk)
         
         $display("T=%0t: TEST 1: Writing the word 0xDEADBEEF to address 0x1000", $time);
-        write_word_en = 1;
-        write_word_address = 32'h1000;
-        write_word_data = 32'hDEADBEEF;
+        write_word_en <= 1;
+        write_word_address <= 32'h1000;
+        write_word_data <= 32'hDEADBEEF;
         @(posedge clk);
-        write_word_en = 0;
+        write_word_en <= 0;
 
         $display("T=%0t: TEST 2: Reading a word from address 0x1000 (expecting 0xDEADBEEF)", $time);
-        read_word_en = 1;
-        read_word_address = 32'h1000;
+        read_word_en <= 1;
+        read_word_address <= 32'h1000;
         @(posedge clk);
-        read_word_en = 0;
+        read_word_en <= 0;
         @(posedge clk);
 
         if (read_word_data == 32'hDEADBEEF) begin
@@ -66,29 +66,27 @@ module test_data_memory();
             $display("T=%0t: Word Read: ERROR. Expected 0xDEADBEEF, received 0x%h", $time, read_word_data);
         end
 
-        # (2 * CLK_PERIOD);
-
         $display("T=%0t: TEST 3: Writing byte 0xAA to address 0x1001", $time);
-        write_byte_en = 1;
-        write_byte_address = 32'h1001;
-        write_byte_data = 8'hAA;
+        write_byte_en <= 1;
+        write_byte_address <= 32'h1001;
+        write_byte_data <= 8'hAA;
         @(posedge clk);
-        write_byte_en = 0;
+        write_byte_en <= 0;
+        @(posedge clk);
 
         $display("T=%0t: Writing the second byte 0x55 to address 0x1003", $time);
-        write_byte_en = 1;
-        write_byte_address = 32'h1003;
-        write_byte_data = 8'h55;
+        write_byte_en <= 1;
+        write_byte_address <= 32'h1003;
+        write_byte_data <= 8'h55;
         @(posedge clk);
-        write_byte_en = 0;
-        
-        # (2 * CLK_PERIOD);
+        write_byte_en <= 0;
+        @(posedge clk);
 
         $display("T=%0t: TEST 4: Reading a byte from address 0x1001 (expecting 0xAA)", $time);
-        read_byte_en = 1;
-        read_byte_address = 32'h1001;
+        read_byte_en <= 1;
+        read_byte_address <= 32'h1001;
         @(posedge clk);
-        read_byte_en = 0;
+        read_byte_en <= 0;
         @(posedge clk);
 
         if (read_byte_data == 8'hAA) begin
@@ -98,10 +96,10 @@ module test_data_memory();
         end
 
         $display("T=%0t: Reading a byte from address 0x1003 (expecting 0x55)", $time);
-        read_byte_en = 1;
-        read_byte_address = 32'h1003;
+        read_byte_en <= 1;
+        read_byte_address <= 32'h1003;
         @(posedge clk);
-        read_byte_en = 0;
+        read_byte_en <= 0;
         @(posedge clk);
 
         if (read_byte_data == 8'h55) begin
@@ -109,8 +107,6 @@ module test_data_memory();
         end else begin
             $display("T=%0t: Byte Read 1: ERROR. Expected 0xAA, received 0x%h", $time, read_byte_data);
         end
-
-        # (2 * CLK_PERIOD);
 
         $display("--- Test finished ---");
         $finish;
