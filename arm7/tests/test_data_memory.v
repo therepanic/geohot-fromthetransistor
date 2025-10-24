@@ -33,7 +33,7 @@ module test_data_memory();
 
     parameter CLK_PERIOD = 10;
     initial begin
-        clk = 1'b0;
+        clk = 0;
         forever #(CLK_PERIOD / 2) clk = ~clk;
     end
 
@@ -44,7 +44,7 @@ module test_data_memory();
         write_word_data = 0; write_byte_data = 0;
         read_word_address = 0; read_byte_address = 0;
         $display("--- Running tests for ARM7 data memory");
-         @(posedge clk)
+        @(posedge clk)
         
         $display("T=%0t: TEST 1: Writing the word 0xDEADBEEF to address 0x1000", $time);
         write_word_en <= 1;
