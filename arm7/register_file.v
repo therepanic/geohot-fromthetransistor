@@ -3,7 +3,10 @@ module register_file(
     input write_en,
     input[3:0] write_reg,
     input[31:0] write_value,
-    input write_restore_from_SPSR
+    input write_restore_from_SPSR,
+    input read_en,
+    input[3:0] read_reg,
+    output reg[31:0] read_value
 );
     reg[31:0] GENERAL_registers[0:12];
     reg[31:0] FIQ_registers[0:4];
@@ -51,6 +54,7 @@ module register_file(
             endcase
         end
     endfunction
+
     function [31:0] select_SPSR;
         input [2:0] mode;
         input [31:0] SPSR_registers[0:4];
@@ -68,24 +72,40 @@ module register_file(
 
     always @(posedge clk) begin
         if (write_en) begin
-            if (mode == 010 && write_reg >= 8 && write_reg <= 12) begin
+            if (mode == 3'b010 && write_reg >= 8 && write_reg <= 12) begin
                 // if mode == FIQ
                 FIQ_registers[write_reg - 8] <= write_value;
-            end else if (write_reg == 15) begin
-                // for sure
-                write_value = write_value & ~3;    // USR -> 000, SYS -> 001, FIQ -> 010, IRQ -> 011, SVC -> 100, ABT -> 101, UND -> 110
-                if (write_restore_from_SPSR == 1) begin
-                    cpsr_register <= select_SPSR(mode, SPSR_registers);
-                end
-                pc_register <= write_value;
             end else begin
                 if (write_reg == 13) begin
                     SP_registers[bank_idx(mode)] <= write_value;
                 end else if (write_reg == 14) begin
                     LR_registers[bank_idx(mode)] <= write_value;
+                end else if (write_reg == 15) begin
+                    // for sure
+                    write_value = write_value & ~3;    // USR -> 000, SYS -> 001, FIQ -> 010, IRQ -> 011, SVC -> 100, ABT -> 101, UND -> 110
+                    if (write_restore_from_SPSR == 1) begin
+                        cpsr_register <= select_SPSR(mode, SPSR_registers);
+                    end
+                    pc_register <= write_value;
                 end else begin
                     GENERAL_registers[write_reg] <= write_value;
                 end
+            end
+        end
+        if (read_en) begin
+            if (mode == 3'b010 && read_reg >= 8 && read_reg <= 12) begin
+                read_value <= FIQ_registers[read_reg - 8];
+            end else begin
+                if (read_reg == 13) begin
+                    read_value <= SP_registers[bank_idx(mode)];
+                end else if (read_reg == 14) begin
+                    read_value <= LR_registers[bank_idx(mode)];
+                end else if (read_reg == 15) begin
+                    read_value <= pc_register;
+                end else begin
+                    read_value <= GENERAL_registers[read_reg];
+                end
+
             end
         end
     end
