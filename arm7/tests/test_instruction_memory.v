@@ -23,7 +23,7 @@ module test_instruction_memory();
         $display("--- Running tests for ARM7 instruction memory");
 
         read_en <= 1;
-        read_addr = 0;
+        read_addr <= 0;
 
         repeat (4) begin
             @(posedge clk);
