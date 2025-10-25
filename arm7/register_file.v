@@ -6,7 +6,11 @@ module register_file(
     input write_restore_from_SPSR,
     input read_en,
     input[3:0] read_reg,
-    output reg[31:0] read_value
+    output reg[31:0] read_value,
+    input cpsr_read_en,
+    output reg[31:0] cpsr_read_value,
+    input cpsr_write_en,
+    input reg[31:0] cpsr_write_value
 );
     reg[31:0] GENERAL_registers[0:12];
     reg[31:0] FIQ_registers[0:4];
@@ -57,7 +61,6 @@ module register_file(
 
     function [31:0] select_SPSR;
         input [2:0] mode;
-        input [31:0] SPSR_registers[0:4];
         begin
             case(mode)
                 3'b010: select_SPSR = SPSR_registers[0];
@@ -81,12 +84,12 @@ module register_file(
                 end else if (write_reg == 14) begin
                     LR_registers[bank_idx(mode)] <= write_value;
                 end else if (write_reg == 15) begin
-                    // for sure
-                    write_value = write_value & ~3;    // USR -> 000, SYS -> 001, FIQ -> 010, IRQ -> 011, SVC -> 100, ABT -> 101, UND -> 110
+                    //note: we not support thumb now
                     if (write_restore_from_SPSR == 1) begin
-                        cpsr_register <= select_SPSR(mode, SPSR_registers);
+                        cpsr_register <= select_SPSR(mode);
                     end
-                    pc_register <= write_value;
+                    // for sure
+                    pc_register <= write_value & ~3; // USR -> 000, SYS -> 001, FIQ -> 010, IRQ -> 011, SVC -> 100, ABT -> 101, UND -> 110
                 end else begin
                     GENERAL_registers[write_reg] <= write_value;
                 end
@@ -107,6 +110,12 @@ module register_file(
                 end
 
             end
+        end
+        if (cpsr_read_en) begin
+            cpsr_read_value <= cpsr_register;
+        end
+        if (cpsr_write_en) begin
+            cpsr_register <= cpsr_write_value;
         end
     end
 
