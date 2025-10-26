@@ -31,62 +31,73 @@ module branch(
             if (state && cur_cond) begin
                 if (cur_link && temp_link != 2'b11) begin
                     case (temp_link)
-                        2'b00:
+                        2'b00: begin
                             read_en <= 1;
                             read_reg <= 15;
                             temp_link <= temp_link + 1;
-                        2'b01:
+                        end
+                        2'b01: begin
                             read_en <= 0;
                             temp_link <= temp_link + 1;
-                        2'b10:
+                        end
+                        2'b10: begin
                             write_en <= 1;
                             write_reg <= 14;
                             write_value <= read_value + 4;
                             temp_link <= temp_link + 1;
+                        end
                     endcase
                 end else begin
                     if (temp_link == 2'b11) begin
                         write_en <= 0;
                     end
                     case (temp)
-                        2'b00:
+                        2'b00: begin
                             read_en <= 1;
                             read_reg <= 15;
                             temp <= temp + 1;
-                        2'b01:
+                        end
+                        2'b01: begin
                             read_en <= 0;
                             temp <= temp + 1;
-                        2'b10:
+                        end
+                        2'b10: begin
                             write_en <= 1;
                             write_reg <= 15;
                             write_value <= read_value + 8 + ({{6{cur_offset[23]}}, cur_offset, 2'b00});
                             temp <= temp + 1;
-                        2'b11:
+                        end
+                        2'b11: begin
                             write_en <= 0;
                             temp <= 0;
                             temp_link <= 0;
                             state <= 0;
+                        end
                     endcase
                 end            
             end else if (state) begin
                 case (temp)
-                    2'b00:
+                    2'b00: begin
                         read_en <= 1;
                         read_reg <= 15;
                         temp <= temp + 1;
-                    2'b01:
+                    end
+                    2'b01: begin
                         read_en <= 0;
                         temp <= temp + 1;
-                    2'b10:
+                    end
+                    2'b10: begin
                         write_en <= 1;
                         write_reg <= 15;
                         write_value <= read_value + 4;
                         temp <= temp + 1;
-                    2'b11:
+                    end
+                    2'b11: begin
                         write_en <= 0;
                         temp <= 0;
                         temp_link <= 0;
                         state <= 0;
+                    end
                 endcase
             end
         end
