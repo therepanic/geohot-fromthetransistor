@@ -10,7 +10,7 @@ module register_file(
     input cpsr_read_en,
     output reg[31:0] cpsr_read_value,
     input cpsr_write_en,
-    input reg[31:0] cpsr_write_value
+    input[31:0] cpsr_write_value
 );
     reg[31:0] GENERAL_registers[0:12];
     reg[31:0] FIQ_registers[0:4];
