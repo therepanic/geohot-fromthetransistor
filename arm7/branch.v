@@ -11,30 +11,41 @@ module branch(
     output reg[3:0] read_reg,
     input[31:0] read_value
 );
+    reg state = 0;
 
-    reg[1:0] tempLink = 2'b00;
+    reg cur_cond;
+    reg cur_link;
+    reg[23:0] cur_offset;
+
+    reg[1:0] temp_link = 2'b00;
     reg[1:0] temp = 2'b00;
 
     always @(posedge clk) begin
-        if (en || tempLink != 2'b00 || temp != 2'b00) begin
-            if (cond) begin
-                if (link && tempLink != 2'b11) begin
-                    case (tempLink)
+        if (en || temp_link != 2'b00 || temp != 2'b00) begin
+            if (!state && en && temp_link == 2'b00 && temp == 2'b00) begin
+                cur_cond <= cond;
+                cur_link <= link;
+                cur_offset <= offset;
+                state <= 1;
+            end
+            if (state && cur_cond) begin
+                if (cur_link && temp_link != 2'b11) begin
+                    case (temp_link)
                         2'b00:
                             read_en <= 1;
                             read_reg <= 15;
-                            tempLink <= tempLink + 1;
+                            temp_link <= temp_link + 1;
                         2'b01:
                             read_en <= 0;
-                            tempLink <= tempLink + 1;
+                            temp_link <= temp_link + 1;
                         2'b10:
                             write_en <= 1;
                             write_reg <= 14;
                             write_value <= read_value + 4;
-                            tempLink <= tempLink + 1;
+                            temp_link <= temp_link + 1;
                     endcase
                 end else begin
-                    if (tempLink == 2'b11) begin
+                    if (temp_link == 2'b11) begin
                         write_en <= 0;
                     end
                     case (temp)
@@ -48,15 +59,16 @@ module branch(
                         2'b10:
                             write_en <= 1;
                             write_reg <= 15;
-                            write_value <= read_value + 8 + ({{6{offset[23]}}, offset, 2'b00});
+                            write_value <= read_value + 8 + ({{6{cur_offset[23]}}, cur_offset, 2'b00});
                             temp <= temp + 1;
                         2'b11:
                             write_en <= 0;
                             temp <= 0;
-                            tempLink <= 0;
+                            temp_link <= 0;
+                            state <= 0;
                     endcase
                 end            
-            end else begin
+            end else if (state) begin
                 case (temp)
                     2'b00:
                         read_en <= 1;
@@ -73,7 +85,8 @@ module branch(
                     2'b11:
                         write_en <= 0;
                         temp <= 0;
-                        tempLink <= 0;
+                        temp_link <= 0;
+                        state <= 0;
                 endcase
             end
         end

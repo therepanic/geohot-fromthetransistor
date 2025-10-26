@@ -24,7 +24,7 @@ module decoder(
     output reg branch_en,
     output reg branch_cond,
     output reg branch_link,
-    output reg[23:0] branch_offset,
+    output reg[23:0] branch_offset
 );
 
     function check_condition;
@@ -59,8 +59,8 @@ module decoder(
     reg[1:0] temp = 2'b00;
     reg branch_temp_reset = 1'b0;
 
-    reg[3:0] opcode;
-    reg[2:0] type;
+    wire[3:0] opcode = instr[31:28];
+    wire[2:0] type = instr[27:25];
     always @(posedge clk) begin
         if (branch_temp_reset) begin
             branch_temp_reset <= 0;
@@ -75,8 +75,6 @@ module decoder(
                     cpsr_read_en <= 0;
                     temp <= temp + 1;
                 2'b10:
-                    opcode = instr[31:28];
-                    type = instr[27:25];
                     if (check_condition(opcode, cpsr_read_value) == 1) begin
                         case (type)
                             3'b000, 3'b001:

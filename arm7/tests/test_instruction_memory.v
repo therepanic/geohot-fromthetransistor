@@ -28,7 +28,7 @@ module test_instruction_memory();
         repeat (4) begin
             @(posedge clk);
             read_en <= 0;
-            @(posedge clk);
+            @(posedge clk);                                                    
 
             $display("PC = %0d | instr = %h", read_addr, read_instr);
             read_addr <= read_addr + 4;
