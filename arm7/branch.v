@@ -4,7 +4,7 @@ module branch(
     input cond,
     input link,
     input[23:0] offset,
-    output write_restore_from_SPSR,
+    output reg write_restore_from_SPSR,
     output reg write_en,
     output reg[3:0] write_reg,
     output reg[31:0] write_value,
