@@ -44,7 +44,9 @@ register_file rf(
     .cpsr_read_en(1'b0),
     .cpsr_read_value(),
     .cpsr_write_en(1'b0),
-    .cpsr_write_value(32'b0)
+    .cpsr_write_value(32'b0),
+    .mode_read_en(1'b0),
+    .mode_read_value(32'b0)
 );
 
 assign b_read_value = tb_rd_val;

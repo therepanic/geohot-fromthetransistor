@@ -13,6 +13,8 @@ module test_register_file();
     wire [31:0] cpsr_read_value;
     reg cpsr_write_en;
     reg [31:0] cpsr_write_value;
+    reg mode_read_en;
+    reg [31:0] mode_read_value;
 
     register_file uut(
         .clk(clk),
@@ -27,6 +29,8 @@ module test_register_file();
         .cpsr_read_value(cpsr_read_value),
         .cpsr_write_en(cpsr_write_en),
         .cpsr_write_value(cpsr_write_value)
+        .mode_read_en(mode_read_en)
+        .mode_read_value(mode_read_value)
     );
 
     parameter CLK_PERIOD = 10;
@@ -46,6 +50,8 @@ module test_register_file();
         write_value = 0;
         read_reg = 0;
         cpsr_write_value = 0;
+        mode_read_en = 0;
+        mode_read_value = 0;
 
         $display("--- Running tests for ARM7 register file");
 

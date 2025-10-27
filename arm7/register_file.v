@@ -10,7 +10,9 @@ module register_file(
     input cpsr_read_en,
     output reg[31:0] cpsr_read_value,
     input cpsr_write_en,
-    input[31:0] cpsr_write_value
+    input[31:0] cpsr_write_value,
+    input mode_read_en,
+    output reg[31:0] mode_read_value
 );
     reg[31:0] GENERAL_registers[0:12];
     reg[31:0] FIQ_registers[0:4];
@@ -116,6 +118,9 @@ module register_file(
         end
         if (cpsr_write_en) begin
             cpsr_register <= cpsr_write_value;
+        end
+        if (mode_read_en) begin
+            mode_read_value <= mode;
         end
     end
 
