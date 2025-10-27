@@ -165,7 +165,6 @@ module alu(
                                                             end
                                                             3: begin
                                                                 write_en <= 0;
-                                                                write_restore_from_SPSR <= 0;
                                                                 result_state <= result_state + 1;
                                                             end
                                                         endcase

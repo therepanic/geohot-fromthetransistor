@@ -57,6 +57,7 @@ branch uut(
     .cond(cond),
     .link(link),
     .offset(offset),
+    .write_restore_from_SPSR(1'b0),
     .write_en(b_write_en),
     .write_reg(b_write_reg),
     .write_value(b_write_value),

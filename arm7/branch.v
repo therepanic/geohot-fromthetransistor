@@ -4,6 +4,7 @@ module branch(
     input cond,
     input link,
     input[23:0] offset,
+    output write_restore_from_SPSR,
     output reg write_en,
     output reg[3:0] write_reg,
     output reg[31:0] write_value,
@@ -42,6 +43,7 @@ module branch(
                         end
                         2'b10: begin
                             write_en <= 1;
+                            write_restore_from_SPSR <= 0;
                             write_reg <= 14;
                             write_value <= read_value + 4;
                             temp_link <= temp_link + 1;
@@ -63,6 +65,7 @@ module branch(
                         end
                         2'b10: begin
                             write_en <= 1;
+                            write_restore_from_SPSR <= 0;
                             write_reg <= 15;
                             write_value <= read_value + 8 + ({{6{cur_offset[23]}}, cur_offset, 2'b00});
                             temp <= temp + 1;
@@ -88,6 +91,7 @@ module branch(
                     end
                     2'b10: begin
                         write_en <= 1;
+                        write_restore_from_SPSR <= 0;
                         write_reg <= 15;
                         write_value <= read_value + 4;
                         temp <= temp + 1;
