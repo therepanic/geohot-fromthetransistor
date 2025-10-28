@@ -145,7 +145,7 @@ module alu(
                                                 got_cpsr <= got_cpsr + 1;
                                             end
                                             3: begin
-                                                // now handle opcode (we support now only ADD, SUB, AND, CMP ,MOV)
+                                                // now handle opcode (we support now only ADD, SUB, AND, CMP, MOV)
                                                 case (cur_opcode)
                                                     4'b0100: begin
                                                         //ADD
@@ -175,6 +175,35 @@ module alu(
                                                                 result_state <= result_state + 1;
                                                             end
                                                         endcase
+                                                    4'b0010: begin
+                                                        //SUB
+                                                        case (result_state)
+                                                            0: begin
+                                                                higher_result <= {1'b0,temp_op1} - {1'b0,temp_op2};
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            1: begin
+                                                                result <= higher_result[31:0];
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            2: begin
+                                                                setC <= ~higher_result[32];
+                                                                setV <= (temp_op1[31] ^ temp_op2[31]) & (temp_op1[31] ^ result[31]);
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            3: begin
+                                                                write_en <= 1;
+                                                                write_reg <= cur_rd;
+                                                                write_value <= result;
+                                                                write_restore_from_SPSR <= shouldRestoreFromSPSR(cur_rd, cur_s, temp_mode);
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            4: begin
+                                                                write_en <= 0;
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                        endcase
+                                                    end
                                                     4'b0000: begin
                                                         //AND
                                                         case (result_state)
