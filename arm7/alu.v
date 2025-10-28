@@ -175,9 +175,31 @@ module alu(
                                                                 result_state <= result_state + 1;
                                                             end
                                                         endcase
+                                                    4'b1101: begin
+                                                        //MOV
+                                                        case (result_state)
+                                                            0: begin
+                                                                setC <= temp_cpsr[29];
+                                                                setV <= temp_cpsr[28];
+                                                                result <= temp_op2;
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            1: begin
+                                                                write_en <= 1;
+                                                                write_reg <= cur_rd;
+                                                                write_value <= result;
+                                                                write_restore_from_SPSR <= shouldRestoreFromSPSR(cur_rd, cur_s, temp_mode);
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            2: begin
+                                                                write_en <= 0;
+                                                                result_state <= 5;
+                                                            end
+                                                        endcase
+                                                    end
                                                     end
                                                 endcase
-                                                if (result_state == 4) begin
+                                                if (result_state == 5) begin
                                                     if (cur_s || cur_opcode == 4'b1010) begin
                                                         case (write_cpsr_state)
                                                             0: begin
