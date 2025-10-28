@@ -43,7 +43,7 @@ module alu(
     reg[31:0] temp_cpsr;
 
     reg[31:0] result;
-    reg[32:0] sum;
+    reg[32:0] higher_result;
 
     reg setN = 0, setZ = 0, setC = 0, setV = 0;
 
@@ -151,15 +151,15 @@ module alu(
                                                         //ADD
                                                         case (result_state)
                                                             0: begin
-                                                                sum <= {1'b0,temp_op1} + {1'b0,temp_op2};
+                                                                higher_result <= {1'b0,temp_op1} + {1'b0,temp_op2};
                                                                 result_state <= result_state + 1;
                                                             end
                                                             1: begin
-                                                                result <= sum[31:0];
+                                                                result <= higher_result[31:0];
                                                                 result_state <= result_state + 1;
                                                             end
                                                             2: begin
-                                                                setC <= sum[32];
+                                                                setC <= higher_result[32];
                                                                 setV <= ((~(temp_op1[31] ^ temp_op2[31])) & (temp_op1[31] ^ result[31]));
                                                                 result_state <= result_state + 1;
                                                             end
@@ -193,6 +193,24 @@ module alu(
                                                             end
                                                             2: begin
                                                                 write_en <= 0;
+                                                                result_state <= 4;
+                                                            end
+                                                        endcase
+                                                    end
+                                                    4'b1010: begin
+                                                        //CMP
+                                                        case (result_state)
+                                                            0: begin
+                                                                higher_result <= {1'b0, temp_op1} - {1'b0, temp_op2};
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            1: begin
+                                                                result <= higher_result[31:0];
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            2: begin
+                                                                setC <= ~higher_result[32];
+                                                                setV <= (temp_op1[31] ^ temp_op2[31]) & (temp_op1[31] ^ result[31]);
                                                                 result_state <= 4;
                                                             end
                                                         endcase
