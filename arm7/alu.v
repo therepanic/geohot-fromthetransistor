@@ -18,8 +18,8 @@ module alu(
     input[31:0] mode_read_value,
     output reg cpsr_read_en,
     input[31:0] cpsr_read_value,
-    output cpsr_write_en,
-    output reg[31:0] cpsr_write_value,
+    output reg cpsr_write_en,
+    output reg[31:0] cpsr_write_value
 );
 
     reg state = 0;
@@ -43,12 +43,13 @@ module alu(
     reg[31:0] temp_cpsr;
 
     reg[31:0] result;
+    reg[32:0] sum;
 
-    reg setN, setZ, setC, setV;
+    reg setN = 0, setZ = 0, setC = 0, setV = 0;
 
 
     function shouldRestoreFromSPSR;
-        input[4:0] rd;
+        input[3:0] rd;
         input s;
         input[2:0] mode;
         begin
@@ -63,6 +64,7 @@ module alu(
     always @(posedge clk) begin
         if (en || state) begin
             if (!state) begin
+                setN <= 0; setZ <= 0; setC <= 0; setV <= 0;
                 cur_immediate <= immediate;
                 cur_opcode <= opcode;
                 cur_s <= s;
@@ -115,7 +117,7 @@ module alu(
                                             got_op2 <= 3;
                                         end else begin
                                             read_en <= 1;
-                                            read_reg <= cur_operand2;
+                                            read_reg <= cur_operand2[3:0];
                                             got_op2 <= got_op2 + 1;
                                         end
                                     end
@@ -145,25 +147,30 @@ module alu(
                                             3: begin
                                                 // now handle opcode (we support now only ADD, SUB, AND, CMP ,MOV)
                                                 case (cur_opcode)
-                                                    4'b1101: begin
+                                                    4'b0100: begin
                                                         //ADD
                                                         case (result_state)
                                                             0: begin
-                                                                result <= (temp_op1 & 32'hFFFFFFFF) + (temp_op2 & 32'hFFFFFFFF);
+                                                                sum <= {1'b0,temp_op1} + {1'b0,temp_op2};
                                                                 result_state <= result_state + 1;
                                                             end
                                                             1: begin
-                                                                setC <= result[32];
-                                                                setV <= ((~(temp_op1[31] ^ temp_op2[31])) & (temp_op1[31] ^ result[31]));
+                                                                result <= sum[31:0];
                                                                 result_state <= result_state + 1;
                                                             end
                                                             2: begin
-                                                                write_en <= 1;
-                                                                write_reg <= cur_rd;
-                                                                write_restore_from_SPSR <= shouldRestoreFromSPSR();
+                                                                setC <= sum[32];
+                                                                setV <= ((~(temp_op1[31] ^ temp_op2[31])) & (temp_op1[31] ^ result[31]));
                                                                 result_state <= result_state + 1;
                                                             end
                                                             3: begin
+                                                                write_en <= 1;
+                                                                write_reg <= cur_rd;
+                                                                write_value <= result;
+                                                                write_restore_from_SPSR <= shouldRestoreFromSPSR(cur_rd, cur_s, temp_mode);
+                                                                result_state <= result_state + 1;
+                                                            end
+                                                            4: begin
                                                                 write_en <= 0;
                                                                 result_state <= result_state + 1;
                                                             end
@@ -174,18 +181,23 @@ module alu(
                                                     if (cur_s || cur_opcode == 4'b1010) begin
                                                         case (write_cpsr_state)
                                                             0: begin
+                                                                setN <= result[31];
+                                                                setZ <= (result == 32'b0);
+                                                                write_cpsr_state <= write_cpsr_state + 1;
+                                                            end
+                                                            1: begin
                                                                 temp_cpsr[31] <= setN;
                                                                 temp_cpsr[30] <= setZ;
                                                                 temp_cpsr[29] <= setC;
                                                                 temp_cpsr[28] <= setV;
                                                                 write_cpsr_state <= write_cpsr_state + 1;
                                                             end
-                                                            1: begin
+                                                            2: begin
                                                                 cpsr_write_en <= 1;
                                                                 cpsr_write_value <= temp_cpsr;
                                                                 write_cpsr_state <= write_cpsr_state + 1;
                                                             end
-                                                            2: begin
+                                                            3: begin
                                                                 // end
                                                                 cpsr_write_en <= 0;
                                                                 state <= 0;
