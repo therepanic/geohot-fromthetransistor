@@ -112,7 +112,7 @@ module alu(
                                 // now geting op2. todo: we not supporting rotate for immediate and shift for registers now.
                                 case (got_op2)
                                     0: begin
-                                        if (immediate) begin
+                                        if (cur_immediate) begin
                                             temp_op2 <= cur_operand2;
                                             got_op2 <= 3;
                                         end else begin
@@ -175,6 +175,7 @@ module alu(
                                                                 result_state <= result_state + 1;
                                                             end
                                                         endcase
+                                                    end
                                                     4'b0010: begin
                                                         //SUB
                                                         case (result_state)
@@ -266,7 +267,6 @@ module alu(
                                                             end
                                                         endcase
                                                     end
-                                                    end
                                                 endcase
                                                 if (result_state == 4) begin
                                                     if (cur_s || cur_opcode == 4'b1010) begin
@@ -300,6 +300,16 @@ module alu(
                                                                 write_cpsr_state <= 0;
                                                             end
                                                         endcase
+                                                    end else begin
+                                                        // end
+                                                        cpsr_write_en <= 0;
+                                                        state <= 0;
+                                                        result_state <= 0;
+                                                        got_mode <= 0;
+                                                        got_op1 <= 0;
+                                                        got_op2 <= 0;
+                                                        got_cpsr <= 0;
+                                                        write_cpsr_state <= 0;
                                                     end
                                                 end
                                             end
@@ -308,7 +318,6 @@ module alu(
                                 endcase
                             end
                         endcase
-
                     end
                 endcase
             end

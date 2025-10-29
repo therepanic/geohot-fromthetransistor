@@ -89,7 +89,7 @@ initial begin
     tb_rd_en = 0; tb_rd_reg = 0;
 
     repeat (2) @(posedge clk);
-    $display("--- branch tests ---");
+    $display("--- Running tests for ARM7 branch");
 
     // Init PC = 0x1000
     use_tb <= 1;
