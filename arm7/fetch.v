@@ -18,7 +18,8 @@ module fetch(
     output reg[31:0] reg_write_value,
     output reg reg_write_restore_from_SPSR,
 
-    input all_busy
+    input all_busy,
+    output reg finished
 );
 
     reg state = 0;
@@ -61,9 +62,21 @@ module fetch(
                         2: begin
                             case (load_instr)
                                 0: begin
-                                    decode_en <= 1;
-                                    instr <= instr_read_instr;
-                                    load_instr <= load_instr + 1;
+                                    if (instr_read_instr == 0) begin
+                                        reg_write_en <= 0;
+                                        decode_en <= 0;
+                                        get_pc <= 0;
+                                        get_instr <= 0;
+                                        load_instr <= 0;
+                                        update_pc <= 0;
+                                        state <= 0;
+                                        // finish
+                                        en <= 0;
+                                    end else begin
+                                        decode_en <= 1;
+                                        instr <= instr_read_instr;
+                                        load_instr <= load_instr + 1;
+                                    end
                                 end
                                 1: begin
                                     load_instr <= load_instr + 1;
