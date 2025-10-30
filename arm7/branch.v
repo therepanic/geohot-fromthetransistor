@@ -10,7 +10,8 @@ module branch(
     output reg[31:0] write_value,
     output reg read_en,
     output reg[3:0] read_reg,
-    input[31:0] read_value
+    input[31:0] read_value,
+    output reg busy
 );
     reg state = 0;
 
@@ -28,6 +29,7 @@ module branch(
                 cur_link <= link;
                 cur_offset <= offset;
                 state <= 1;
+                busy <= 1;
             end
             if (state && cur_cond) begin
                 if (cur_link && temp_link != 2'b11) begin
@@ -75,6 +77,7 @@ module branch(
                             temp <= 0;
                             temp_link <= 0;
                             state <= 0;
+                            busy <= 0;
                         end
                     endcase
                 end            
@@ -101,6 +104,7 @@ module branch(
                         temp <= 0;
                         temp_link <= 0;
                         state <= 0;
+                        busy <= 0;
                     end
                 endcase
             end

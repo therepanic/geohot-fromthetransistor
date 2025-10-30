@@ -29,6 +29,7 @@ wire [31:0] data_write_word_data;
 wire [7:0] data_write_byte_data;
 wire [31:0] data_read_word_address;
 wire [31:0] data_read_byte_address;
+wire busy;
 wire [31:0] data_read_word_data;
 wire [7:0] data_read_byte_data;
 
@@ -93,7 +94,8 @@ sdt uut(
     .data_read_word_address(data_read_word_address),
     .data_read_byte_address(data_read_byte_address),
     .data_read_word_data(data_read_word_data),
-    .data_read_byte_data(data_read_byte_data)
+    .data_read_byte_data(data_read_byte_data),
+    .busy(busy)
 );
 
 data_memory mem(

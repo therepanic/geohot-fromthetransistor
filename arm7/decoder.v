@@ -43,7 +43,8 @@ module decoder(
     output reg sdt_load,
     output reg[3:0] sdt_rn,
     output reg[3:0] sdt_rd,
-    output reg[11:0] sdt_offset
+    output reg[11:0] sdt_offset,
+    output reg busy
 );
 
     function check_condition;
@@ -86,16 +87,22 @@ module decoder(
         if (branch_temp_reset) begin
             branch_temp_reset <= 0;
             branch_en <= 0;
+            busy <= 0;
         end
         if (alu_temp_reset) begin
             alu_temp_reset <= 0;
             alu_en <= 0;
+            busy <= 0;
         end
         if (sdt_temp_reset) begin
             sdt_temp_reset <= 0;
             sdt_en <= 0;
+            busy <= 0;
         end
         if (decode_en || temp != 2'b00) begin
+            if (!busy) begin
+                busy <= 1;
+            end
             case (temp)
                 2'b00:
                     cpsr_read_en <= 1;

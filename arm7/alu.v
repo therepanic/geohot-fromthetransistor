@@ -19,7 +19,8 @@ module alu(
     output reg cpsr_read_en,
     input[31:0] cpsr_read_value,
     output reg cpsr_write_en,
-    output reg[31:0] cpsr_write_value
+    output reg[31:0] cpsr_write_value,
+    output reg busy
 );
 
     reg state = 0;
@@ -72,6 +73,7 @@ module alu(
                 cur_rd <= rd;
                 cur_operand2 <= operand2;
                 state <= 1;
+                busy <= 1;
             end else begin
                 // now getting mode
                 case (got_mode)
@@ -298,6 +300,7 @@ module alu(
                                                                 got_op2 <= 0;
                                                                 got_cpsr <= 0;
                                                                 write_cpsr_state <= 0;
+                                                                busy <= 0;
                                                             end
                                                         endcase
                                                     end else begin
@@ -310,6 +313,7 @@ module alu(
                                                         got_op2 <= 0;
                                                         got_cpsr <= 0;
                                                         write_cpsr_state <= 0;
+                                                        busy <= 0;
                                                     end
                                                 end
                                             end

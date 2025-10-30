@@ -24,7 +24,6 @@ reg tb_rd_en;
 reg[3:0] tb_rd_reg;
 wire[31:0] tb_rd_val;
 
-
 reg use_tb;
 wire rf_write_en = use_tb ? tb_wr_en : b_write_en;
 wire[3:0] rf_wr = use_tb ? tb_wr_reg : b_write_reg;
@@ -50,6 +49,7 @@ register_file rf(
 );
 
 assign b_read_value = tb_rd_val;
+wire busy;
 
 branch uut(
     .clk(clk),
@@ -64,6 +64,7 @@ branch uut(
     .read_en(b_read_en),
     .read_reg(b_read_reg),
     .read_value(b_read_value)
+    .busy(busy)
 );
 
 initial begin

@@ -29,6 +29,7 @@ module test_alu();
     wire [31:0] alu_cpsr_read_value;
     wire alu_cpsr_write_en;
     wire [31:0] alu_cpsr_write_value;
+    wire busy;
 
     reg tb_wr_en;
     reg [3:0] tb_wr_reg;
@@ -93,7 +94,8 @@ module test_alu();
         .cpsr_read_en(alu_cpsr_read_en),
         .cpsr_read_value(alu_cpsr_read_value),
         .cpsr_write_en(alu_cpsr_write_en),
-        .cpsr_write_value(alu_cpsr_write_value)
+        .cpsr_write_value(alu_cpsr_write_value),
+        .busy(busy)
     );
 
     reg [31:0] last_cpsr_written;

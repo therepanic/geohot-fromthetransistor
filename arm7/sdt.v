@@ -28,7 +28,9 @@ module sdt(
     output reg[31:0] data_read_word_address,
     output reg[31:0] data_read_byte_address,
     input[31:0] data_read_word_data,
-    input[7:0] data_read_byte_data
+    input[7:0] data_read_byte_data,
+
+    output reg busy
 );
 
     reg state = 0;
@@ -65,6 +67,7 @@ module sdt(
                 cur_rd <= rd;
                 cur_offset <= offset;
                 state <= 1;
+                busy <= 1;
             end
             case (got_op1)
                 0: begin
@@ -199,6 +202,7 @@ module sdt(
                                             got_load <= 0;
                                             got_write <= 0;
                                             state <= 0;
+                                            busy <= 0;
                                         end
                                     endcase
                                 end
