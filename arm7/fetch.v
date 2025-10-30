@@ -18,8 +18,7 @@ module fetch(
     output reg[31:0] reg_write_value,
     output reg reg_write_restore_from_SPSR,
 
-    input all_busy,
-    output reg finished
+    input all_busy
 );
 
     reg state = 0;
