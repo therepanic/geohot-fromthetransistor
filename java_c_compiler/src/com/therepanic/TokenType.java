@@ -19,5 +19,10 @@ public enum TokenType {
     GTE, // >=
     LTE, // <=
     EQ, // ==
-    NEQ // !=
+    NEQ, // !=
+    INCREMENT,
+    DECREMENT,
+    PLUS_ASSIGN,
+    MINUS_ASSIGN,
+    RETURN
 }

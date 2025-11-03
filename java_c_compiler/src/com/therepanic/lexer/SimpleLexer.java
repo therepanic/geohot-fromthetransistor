@@ -26,6 +26,7 @@ public class SimpleLexer implements Lexer {
                     case "if" -> TokenType.IF;
                     case "else" -> TokenType.ELSE;
                     case "while" -> TokenType.WHILE;
+                    case "return" -> TokenType.RETURN;
                     default -> TokenType.IDENTIFIER;
                 };
                 tokens.add(new Token(tokenType, word));
@@ -39,12 +40,36 @@ public class SimpleLexer implements Lexer {
                 tokens.add(new Token(TokenType.NUMBER, number));
                 pos = start - 1;
             } else {
-                int start = pos;
-                while (start < length && !Character.isLetterOrDigit(source.charAt(start))
-                        && !Character.isWhitespace(source.charAt(start))) {
-                    start++;
+                char current = source.charAt(pos);
+                char next = (pos + 1 < length) ? source.charAt(pos + 1) : '\0';
+                String symbols;
+                if (current == '+' && next == '+') {
+                    symbols = "++";
+                    pos++;
+                } else if (current == '-' && next == '-') {
+                    symbols = "--";
+                    pos++;
+                } else if (current == '+' && next == '=') {
+                    symbols = "+=";
+                    pos++;
+                } else if (current == '-' && next == '=') {
+                    symbols = "-=";
+                    pos++;
+                } else if (current == '=' && next == '=') {
+                    symbols = "==";
+                    pos++;
+                } else if (current == '!' && next == '=') {
+                    symbols = "!=";
+                    pos++;
+                } else if (current == '>' && next == '=') {
+                    symbols = ">=";
+                    pos++;
+                } else if (current == '<' && next == '=') {
+                    symbols = "<=";
+                    pos++;
+                } else {
+                    symbols = String.valueOf(current);
                 }
-                String symbols = source.substring(pos, start);
                 TokenType type = switch (symbols) {
                     case "+" -> TokenType.PLUS;
                     case "-" -> TokenType.MINUS;
@@ -60,10 +85,13 @@ public class SimpleLexer implements Lexer {
                     case "<=" -> TokenType.LTE;
                     case "==" -> TokenType.EQ;
                     case "!=" -> TokenType.NEQ;
+                    case "++" -> TokenType.INCREMENT;
+                    case "--" -> TokenType.DECREMENT;
+                    case "+=" -> TokenType.PLUS_ASSIGN;
+                    case "-=" -> TokenType.MINUS_ASSIGN;
                     default -> throw new IllegalStateException("Unexpected character '" + source.charAt(pos) + "' at position " + pos);
                 };
                 tokens.add(new Token(type, symbols));
-                pos = start - 1;
             }
         }
         return tokens;
