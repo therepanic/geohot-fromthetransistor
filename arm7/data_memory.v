@@ -16,6 +16,7 @@ module data_memory(
     output reg [7:0] read_byte_data
 );
 
+    // 1mb
     reg[31:0] memory[0:262143];
     reg [17:0] write_word_index;
     reg [1:0] write_byte_offset;
