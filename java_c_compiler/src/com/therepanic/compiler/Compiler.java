@@ -1,8 +1,8 @@
-package com.therepanic.generator;
+package com.therepanic.compiler;
 
 import com.therepanic.statement.Statement;
 
-public interface Generator {
+public interface Compiler {
 
     String generate(Statement statement);
 

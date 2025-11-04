@@ -24,5 +24,6 @@ public enum TokenType {
     DECREMENT,
     PLUS_ASSIGN,
     MINUS_ASSIGN,
-    RETURN
+    RETURN,
+    STRUCT
 }
