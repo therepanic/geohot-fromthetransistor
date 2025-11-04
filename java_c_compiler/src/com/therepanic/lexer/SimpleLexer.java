@@ -81,6 +81,7 @@ public class SimpleLexer implements Lexer {
                     case "{" -> TokenType.LBRACE;
                     case "}" -> TokenType.RBRACE;
                     case "<" -> TokenType.LT;
+                    case "," -> TokenType.COMMA;
                     case ">" -> TokenType.GT;
                     case ">=" -> TokenType.GTE;
                     case "<=" -> TokenType.LTE;
@@ -90,6 +91,8 @@ public class SimpleLexer implements Lexer {
                     case "--" -> TokenType.DECREMENT;
                     case "+=" -> TokenType.PLUS_ASSIGN;
                     case "-=" -> TokenType.MINUS_ASSIGN;
+                    case "*" -> TokenType.MUL;
+                    case "/" -> TokenType.DIV;
                     default -> throw new IllegalStateException("Unexpected character '" + source.charAt(pos) + "' at position " + pos);
                 };
                 tokens.add(new Token(type, symbols));

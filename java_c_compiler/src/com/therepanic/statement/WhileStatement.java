@@ -2,5 +2,7 @@ package com.therepanic.statement;
 
 import com.therepanic.expression.Expression;
 
-public record WhileStatement(Expression cond, Statement body) implements Statement {
+import java.util.List;
+
+public record WhileStatement(Expression cond, List<Statement> body) implements Statement {
 }

@@ -2,5 +2,7 @@ package com.therepanic.statement;
 
 import com.therepanic.expression.Expression;
 
-public record IfStatement(Expression cond, Statement thenBranch, Statement elseBranch) {
+import java.util.List;
+
+public record IfStatement(Expression cond, List<Statement> thenBranch, List<Statement> elseBranch) implements Statement {
 }
