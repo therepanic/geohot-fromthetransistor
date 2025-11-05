@@ -50,17 +50,40 @@ public class SimpleParser implements Parser {
             Expression argLiteral = convertLiteralStrToLiteral(tokens.get(this.pos++).text(), null);
             parameters.add(new VarDeclaration(tokens.get(this.pos++).text(), argLiteral));
         }
-        this.pos += 2;
+        expectToken(tokens, TokenType.RPAREN);
+        this.pos++;
+        expectToken(tokens, TokenType.LBRACE);
+        this.pos++;
         List<Statement> body = new ArrayList<>(parseBody(tokens));
+        expectToken(tokens, TokenType.RBRACE);
+        this.pos++;
         return new FunctionStatement(returnType, name, parameters, body);
     }
 
     private List<Statement> parseBody(List<Token> tokens) {
         List<Statement> statements = new ArrayList<>();
-        while (!tokens.get(this.pos).type().equals(TokenType.RBRACE)) {
+        while (this.pos < tokens.size() && !tokens.get(this.pos).type().equals(TokenType.RBRACE)) {
             // int a = ...;
             // a
             if (tokens.get(this.pos).type().equals(TokenType.IDENTIFIER)) {
+                // int a = ...;
+                if (isLiteral(tokens.get(this.pos).text())) {
+                    String literalStr = tokens.get(this.pos++).text();
+                    String variableName = tokens.get(this.pos++).text();
+                    if (tokens.get(this.pos).type().equals(TokenType.SEMICOLON)) {
+                        statements.add(new VarDeclaration(variableName, new IntLiteral(null)));
+                        this.pos++;
+                        continue;
+                    }
+                    expectToken(tokens, TokenType.ASSIGN);
+                    this.pos++;
+                    Expression value = parseSimpleExpression(tokens);
+                    expectToken(tokens, TokenType.SEMICOLON);
+                    this.pos++;
+                    VarDeclaration variable = new VarDeclaration(variableName, value);
+                    statements.add(variable);
+                    continue;
+                }
                 String name = tokens.get(this.pos).text();
                 this.pos++;
                 TokenType type = tokens.get(this.pos).type();
@@ -68,14 +91,16 @@ public class SimpleParser implements Parser {
                     case INCREMENT -> {
                         // a++
                         statements.add(new Assign(name, new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.PLUS)));
+                        expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
                     case DECREMENT -> {
                         // a--
                         statements.add(new Assign(name, new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.MINUS)));
+                        expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
-                    case EQ -> {
+                    case ASSIGN -> {
                         // a = <expr>;
                         this.pos++;
                         Expression value = parseSimpleExpression(tokens);
@@ -136,6 +161,15 @@ public class SimpleParser implements Parser {
                     this.pos++;
                 }
                 statements.add(new IfStatement(cond, thenBranch, elseBranch));
+            } else if (tokens.get(this.pos).type().equals(TokenType.RETURN)) {
+                this.pos++;
+                Expression value = null;
+                if (!tokens.get(this.pos).type().equals(TokenType.SEMICOLON)) {
+                    value = parseSimpleExpression(tokens);
+                }
+                expectToken(tokens, TokenType.SEMICOLON);
+                this.pos++;
+                statements.add(new ReturnStatement(value));
             }
         }
         return statements;
@@ -150,6 +184,13 @@ public class SimpleParser implements Parser {
         return switch (literal) {
             case "int" -> new IntLiteral(value == null ? null : value.intValue());
             default -> throw new IllegalArgumentException("Unknown literal " + literal);
+        };
+    }
+
+    private boolean isLiteral(String value) {
+        return switch (value) {
+            case "int" -> true;
+            default -> false;
         };
     }
 
@@ -261,8 +302,5 @@ public class SimpleParser implements Parser {
             throw new RuntimeException("Expected " + expected + " but got " + tokens.get(this.pos).type());
         }
     }
-
-
-
 
 }

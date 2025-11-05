@@ -5,7 +5,7 @@ public enum TokenType {
     NUMBER,
     PLUS,
     MINUS,
-    ASSIGN,
+    ASSIGN, // =
     SEMICOLON,
     COMMA,
     IF,
