@@ -71,7 +71,7 @@ public class SimpleParser implements Parser {
                     String literalStr = tokens.get(this.pos++).text();
                     String variableName = tokens.get(this.pos++).text();
                     if (tokens.get(this.pos).type().equals(TokenType.SEMICOLON)) {
-                        statements.add(new VarDeclaration(variableName, new IntLiteral(null)));
+                        statements.add(new VarDeclaration(variableName, convertLiteralStrToLiteral(literalStr, null)));
                         this.pos++;
                         continue;
                     }

@@ -34,7 +34,7 @@ public class SimpleLexer implements Lexer {
                 pos = start - 1;
             } else if (Character.isDigit(source.charAt(pos))) {
                 int start = pos;
-                while (start < length && Character.isDigit(source.charAt(start))) {
+                while (start < length && (Character.isLetterOrDigit(source.charAt(start)) || source.charAt(start) == '.')) {
                     start++;
                 }
                 String number = source.substring(pos, start);
