@@ -176,8 +176,40 @@ public class SimpleParser implements Parser {
     }
 
     private Statement parseStructure(List<Token> tokens) {
-        //todo
-        return null;
+        Token firstToken = tokens.get(this.pos++);
+        List<VarDeclaration> fields = new ArrayList<>();
+        String name = null;
+        boolean typedef = false;
+        if (firstToken.type().equals(TokenType.TYPEDEF)) {
+            typedef = true;
+            expectToken(tokens, TokenType.STRUCT);
+            this.pos++;
+            expectToken(tokens, TokenType.LBRACE);
+        } else {
+            // if "struct" first
+            name = tokens.get(this.pos++).text();
+            expectToken(tokens, TokenType.LBRACE);
+        }
+        this.pos++;
+        while (!tokens.get(this.pos).type().equals(TokenType.RBRACE)) {
+            if (isLiteral(tokens.get(this.pos).text())) {
+                String type = tokens.get(this.pos++).text();
+                String fieldName = tokens.get(this.pos++).text();
+                expectToken(tokens, TokenType.SEMICOLON);
+                this.pos++;
+                fields.add(new VarDeclaration(fieldName, convertLiteralStrToLiteral(type, null)));
+            } else {
+                throw new RuntimeException("Unexpected token in struct fields: " + tokens.get(this.pos).type());
+            }
+        }
+        expectToken(tokens, TokenType.RBRACE);
+        this.pos++;
+        if (typedef) {
+            name = tokens.get(this.pos++).text();
+        }
+        expectToken(tokens, TokenType.SEMICOLON);
+        this.pos++;
+        return new StructStatement(name, fields, typedef);
     }
 
     private Expression convertLiteralStrToLiteral(String literal, Number value) {

@@ -28,5 +28,6 @@ public enum TokenType {
     PLUS_ASSIGN,
     MINUS_ASSIGN,
     RETURN,
-    STRUCT
+    STRUCT,
+    TYPEDEF
 }

@@ -28,6 +28,7 @@ public class SimpleLexer implements Lexer {
                     case "while" -> TokenType.WHILE;
                     case "return" -> TokenType.RETURN;
                     case "struct" -> TokenType.STRUCT;
+                    case "typedef" -> TokenType.TYPEDEF;
                     default -> TokenType.IDENTIFIER;
                 };
                 tokens.add(new Token(tokenType, word));
