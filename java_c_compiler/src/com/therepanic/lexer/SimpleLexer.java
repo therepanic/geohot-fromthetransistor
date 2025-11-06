@@ -94,6 +94,7 @@ public class SimpleLexer implements Lexer {
                     case "-=" -> TokenType.MINUS_ASSIGN;
                     case "*" -> TokenType.MUL;
                     case "/" -> TokenType.DIV;
+                    case "&" -> TokenType.AND;
                     default -> throw new IllegalStateException("Unexpected character '" + source.charAt(pos) + "' at position " + pos);
                 };
                 tokens.add(new Token(type, symbols));

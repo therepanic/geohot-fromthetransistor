@@ -2,5 +2,5 @@ package com.therepanic.statement;
 
 import com.therepanic.expression.Expression;
 
-public record Assign(String name, Expression value) implements Statement {
+public record Assign(Expression lhs, Expression rhs) implements Statement {
 }

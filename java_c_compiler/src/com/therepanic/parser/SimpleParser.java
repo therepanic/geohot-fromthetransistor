@@ -3,10 +3,7 @@ package com.therepanic.parser;
 import com.therepanic.Operator;
 import com.therepanic.Token;
 import com.therepanic.TokenType;
-import com.therepanic.expression.BinaryExpression;
-import com.therepanic.expression.Expression;
-import com.therepanic.expression.IntLiteral;
-import com.therepanic.expression.Variable;
+import com.therepanic.expression.*;
 import com.therepanic.statement.*;
 
 import java.util.ArrayList;
@@ -48,7 +45,7 @@ public class SimpleParser implements Parser {
                 continue;
             }
             Expression argLiteral = convertLiteralStrToLiteral(tokens.get(this.pos++).text(), null);
-            parameters.add(new VarDeclaration(tokens.get(this.pos++).text(), argLiteral));
+            parameters.add(new VarDeclaration(tokens.get(this.pos++).text(), argLiteral, null));
         }
         expectToken(tokens, TokenType.RPAREN);
         this.pos++;
@@ -68,35 +65,41 @@ public class SimpleParser implements Parser {
             if (tokens.get(this.pos).type().equals(TokenType.IDENTIFIER)) {
                 // int a = ...;
                 if (isLiteral(tokens.get(this.pos).text())) {
-                    String literalStr = tokens.get(this.pos++).text();
-                    String variableName = tokens.get(this.pos++).text();
-                    if (tokens.get(this.pos).type().equals(TokenType.SEMICOLON)) {
-                        statements.add(new VarDeclaration(variableName, convertLiteralStrToLiteral(literalStr, null)));
+                    String baseType = tokens.get(this.pos++).text();
+                    int pointerDepth = 0;
+                    while (tokens.get(this.pos).type().equals(TokenType.MUL)) {
+                        pointerDepth++;
                         this.pos++;
-                        continue;
                     }
-                    expectToken(tokens, TokenType.ASSIGN);
-                    this.pos++;
-                    Expression value = parseSimpleExpression(tokens);
+                    String variableName = tokens.get(this.pos++).text();
+                    PointerType type = new PointerType(baseType, pointerDepth);
+
+                    Expression value = null;
+                    if (tokens.get(this.pos).type().equals(TokenType.ASSIGN)) {
+                        this.pos++;
+                        value = parseSimpleExpression(tokens);
+                    }
                     expectToken(tokens, TokenType.SEMICOLON);
                     this.pos++;
-                    VarDeclaration variable = new VarDeclaration(variableName, value);
-                    statements.add(variable);
+                    statements.add(new VarDeclaration(variableName, value, type));
                     continue;
                 }
+
                 String name = tokens.get(this.pos).text();
                 this.pos++;
                 TokenType type = tokens.get(this.pos).type();
                 switch (type) {
                     case INCREMENT -> {
                         // a++
-                        statements.add(new Assign(name, new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.PLUS)));
+                        statements.add(new Assign(new Variable(name), new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.PLUS)));
+                        this.pos++;
                         expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
                     case DECREMENT -> {
                         // a--
-                        statements.add(new Assign(name, new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.MINUS)));
+                        statements.add(new Assign(new Variable(name), new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.MINUS)));
+                        this.pos++;
                         expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
@@ -104,7 +107,7 @@ public class SimpleParser implements Parser {
                         // a = <expr>;
                         this.pos++;
                         Expression value = parseSimpleExpression(tokens);
-                        statements.add(new Assign(name, value));
+                        statements.add(new Assign(new Variable(name), value));
                         expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
@@ -112,7 +115,7 @@ public class SimpleParser implements Parser {
                         // a += <expr>;
                         this.pos++;
                         Expression rhs = parseSimpleExpression(tokens);
-                        statements.add(new Assign(name, new BinaryExpression(new Variable(name), rhs, Operator.PLUS)));
+                        statements.add(new Assign(new Variable(name), new BinaryExpression(new Variable(name), rhs, Operator.PLUS)));
                         expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
@@ -120,7 +123,7 @@ public class SimpleParser implements Parser {
                         // a -= <expr>;
                         this.pos++;
                         Expression rhs = parseSimpleExpression(tokens);
-                        statements.add(new Assign(name, new BinaryExpression(new Variable(name), rhs, Operator.MINUS)));
+                        statements.add(new Assign(new Variable(name), new BinaryExpression(new Variable(name), rhs, Operator.MINUS)));
                         expectToken(tokens, TokenType.SEMICOLON);
                         this.pos++;
                     }
@@ -170,6 +173,23 @@ public class SimpleParser implements Parser {
                 expectToken(tokens, TokenType.SEMICOLON);
                 this.pos++;
                 statements.add(new ReturnStatement(value));
+            } else if (tokens.get(this.pos).type().equals(TokenType.MUL)
+                    || tokens.get(this.pos).type().equals(TokenType.AND)
+                    || tokens.get(this.pos).type().equals(TokenType.LPAREN)
+                    || tokens.get(this.pos).type().equals(TokenType.NUMBER)
+                    || tokens.get(this.pos).type().equals(TokenType.MINUS)) {
+                Expression left = parseSimpleExpression(tokens);
+                // like "*b = <expr>;"
+                if (this.pos < tokens.size() && tokens.get(this.pos).type().equals(TokenType.ASSIGN)) {
+                    this.pos++; // skip '='
+                    Expression value = parseSimpleExpression(tokens);
+                    statements.add(new Assign(left, value));
+                    expectToken(tokens, TokenType.SEMICOLON);
+                    this.pos++;
+                } else {
+                    expectToken(tokens, TokenType.SEMICOLON);
+                    this.pos++;
+                }
             }
         }
         return statements;
@@ -194,10 +214,15 @@ public class SimpleParser implements Parser {
         while (!tokens.get(this.pos).type().equals(TokenType.RBRACE)) {
             if (isLiteral(tokens.get(this.pos).text())) {
                 String type = tokens.get(this.pos++).text();
+                int pointerDepth = 0;
+                while (tokens.get(this.pos).type().equals(TokenType.MUL)) {
+                    pointerDepth++;
+                    this.pos++;
+                }
                 String fieldName = tokens.get(this.pos++).text();
                 expectToken(tokens, TokenType.SEMICOLON);
                 this.pos++;
-                fields.add(new VarDeclaration(fieldName, convertLiteralStrToLiteral(type, null)));
+                fields.add(new VarDeclaration(fieldName, null, new PointerType(type, pointerDepth)));
             } else {
                 throw new RuntimeException("Unexpected token in struct fields: " + tokens.get(this.pos).type());
             }
@@ -226,6 +251,10 @@ public class SimpleParser implements Parser {
         };
     }
 
+    private Expression parseSimpleExpression(List<Token> tokens) {
+        return parseEquality(tokens);
+    }
+
     private Expression parseEquality(List<Token> tokens) {
         Expression left = parseComparison(tokens);
         while (this.pos < tokens.size()) {
@@ -242,10 +271,6 @@ public class SimpleParser implements Parser {
             } else break;
         }
         return left;
-    }
-
-    private Expression parseSimpleExpression(List<Token> tokens) {
-        return parseEquality(tokens);
     }
 
     private Expression parseComparison(List<Token> tokens) {
@@ -293,7 +318,7 @@ public class SimpleParser implements Parser {
 
 
     private Expression parseFactor(List<Token> tokens) {
-        Expression left = parsePrimary(tokens);
+        Expression left = parseUnary(tokens);
         while (this.pos < tokens.size()) {
             TokenType type = tokens.get(this.pos).type();
             Operator op = switch (type) {
@@ -303,13 +328,29 @@ public class SimpleParser implements Parser {
             };
             if (op != null) {
                 this.pos++;
-                Expression right = parsePrimary(tokens);
+                Expression right = parseUnary(tokens);
                 left = new BinaryExpression(left, right, op);
             } else {
                 break;
             }
         }
         return left;
+    }
+
+    private Expression parseUnary(List<Token> tokens) {
+        if (this.pos >= tokens.size()) return null;
+        TokenType type = tokens.get(this.pos).type();
+        if (type == TokenType.MUL) {
+            this.pos++;
+            return new DerefExpression(parseUnary(tokens));
+        } else if (type == TokenType.AND) {
+            this.pos++;
+            return new AddressOfExpression(parseUnary(tokens));
+        } else if (type == TokenType.MINUS) {
+            this.pos++;
+            return new UnaryMinusExpression(parseUnary(tokens));
+        }
+        return parsePrimary(tokens);
     }
 
     private Expression parsePrimary(List<Token> tokens) {

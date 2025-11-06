@@ -2,6 +2,8 @@ package com.therepanic;
 
 import com.therepanic.lexer.Lexer;
 import com.therepanic.lexer.SimpleLexer;
+import com.therepanic.parser.Parser;
+import com.therepanic.parser.SimpleParser;
 import com.therepanic.preprocessor.Preprocessor;
 import com.therepanic.preprocessor.SimplePreprocessor;
 
@@ -18,5 +20,7 @@ public class Main {
         Lexer lexer = new SimpleLexer();
         List<Token> tokens = lexer.tokenize(str);
         System.out.println(tokens);
+        Parser parser = new SimpleParser();
+        System.out.println(parser.parse(tokens));
     }
 }
