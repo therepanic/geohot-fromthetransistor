@@ -240,6 +240,8 @@ public class SimpleParser implements Parser {
     private Expression convertLiteralStrToLiteral(String literal, Number value) {
         return switch (literal) {
             case "int" -> new IntLiteral(value == null ? null : value.intValue());
+            case "long" -> new LongLiteral(value == null ? null : value.longValue());
+            case "float" -> new FloatLiteral(value == null ? null : value.floatValue());
             default -> throw new IllegalArgumentException("Unknown literal " + literal);
         };
     }
@@ -247,6 +249,8 @@ public class SimpleParser implements Parser {
     private boolean isLiteral(String value) {
         return switch (value) {
             case "int" -> true;
+            case "long" -> true;
+            case "float" -> true;
             default -> false;
         };
     }
@@ -268,7 +272,9 @@ public class SimpleParser implements Parser {
                 this.pos++;
                 Expression right = parseComparison(tokens);
                 left = new BinaryExpression(left, right, op);
-            } else break;
+            } else {
+                break;
+            }
         }
         return left;
     }
@@ -357,7 +363,17 @@ public class SimpleParser implements Parser {
         Token t = tokens.get(this.pos);
         this.pos++;
         if (t.type() == TokenType.NUMBER) {
-            return new IntLiteral(Integer.parseInt(t.text()));
+            String text = t.text();
+            if (text.endsWith("L") || text.endsWith("l")) {
+                long val = Long.parseLong(text.substring(0, text.length() - 1));
+                return new LongLiteral(val);
+            } else if (text.endsWith("F") || text.endsWith("f")) {
+                float val = Float.parseFloat(text.replaceAll("[fF]", ""));
+                return new FloatLiteral(val);
+            } else {
+                int val = Integer.parseInt(text);
+                return new IntLiteral(val);
+            }
         } else if (t.type() == TokenType.IDENTIFIER) {
             return new Variable(t.text());
         } else if (t.type() == TokenType.LPAREN) {

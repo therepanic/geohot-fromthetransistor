@@ -39,6 +39,11 @@ public class SimpleLexer implements Lexer {
                     start++;
                 }
                 String number = source.substring(pos, start);
+                char suffix = (start < length) ? source.charAt(start) : '\0';
+                if (suffix == 'L' || suffix == 'l' || suffix == 'F' || suffix == 'f') {
+                    start++;
+                    number += suffix;
+                }
                 tokens.add(new Token(TokenType.NUMBER, number));
                 pos = start - 1;
             } else {
