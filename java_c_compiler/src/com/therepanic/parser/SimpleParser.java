@@ -63,6 +63,26 @@ public class SimpleParser implements Parser {
             // int a = ...;
             // a
             if (tokens.get(this.pos).type().equals(TokenType.IDENTIFIER)) {
+                if (this.pos + 1 < tokens.size() && tokens.get(this.pos + 1).type().equals(TokenType.LPAREN)) {
+                    String funcName = tokens.get(this.pos).text();
+                    this.pos++;
+                    expectToken(tokens, TokenType.LPAREN);
+                    this.pos++;
+                    List<Expression> args = new ArrayList<>();
+                    while (!tokens.get(this.pos).type().equals(TokenType.RPAREN)) {
+                        if (tokens.get(this.pos).type().equals(TokenType.COMMA)) {
+                            this.pos++;
+                            continue;
+                        }
+                        args.add(parseSimpleExpression(tokens));
+                    }
+                    expectToken(tokens, TokenType.RPAREN);
+                    this.pos++;
+                    expectToken(tokens, TokenType.SEMICOLON);
+                    this.pos++;
+                    statements.add(new FunctionCallStatement(funcName, args));
+                    continue;
+                }
                 // int a = ...;
                 if (isLiteral(tokens.get(this.pos).text())) {
                     String baseType = tokens.get(this.pos++).text();
