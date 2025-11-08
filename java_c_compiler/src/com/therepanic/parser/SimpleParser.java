@@ -387,7 +387,7 @@ public class SimpleParser implements Parser {
             if (text.endsWith("L") || text.endsWith("l")) {
                 long val = Long.parseLong(text.substring(0, text.length() - 1));
                 return new LongLiteral(val);
-            } else if (text.endsWith("F") || text.endsWith("f")) {
+            } else if (text.endsWith("F") || text.endsWith("f") || text.contains(".")) {
                 float val = Float.parseFloat(text.replaceAll("[fF]", ""));
                 return new FloatLiteral(val);
             } else {
@@ -395,6 +395,20 @@ public class SimpleParser implements Parser {
                 return new IntLiteral(val);
             }
         } else if (t.type() == TokenType.IDENTIFIER) {
+            if (this.pos < tokens.size() && tokens.get(this.pos).type().equals(TokenType.LPAREN)) {
+                this.pos++;
+                List<Expression> args = new ArrayList<>();
+                while (!tokens.get(this.pos).type().equals(TokenType.RPAREN)) {
+                    if (tokens.get(this.pos).type().equals(TokenType.COMMA)) {
+                        this.pos++;
+                        continue;
+                    }
+                    args.add(parseSimpleExpression(tokens));
+                }
+                expectToken(tokens, TokenType.RPAREN);
+                this.pos++;
+                return new FunctionCallExpression(t.text(), args);
+            }
             return new Variable(t.text());
         } else if (t.type() == TokenType.LPAREN) {
             Expression expr = parseSimpleExpression(tokens);

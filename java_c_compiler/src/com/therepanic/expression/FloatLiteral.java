@@ -1,4 +1,4 @@
 package com.therepanic.expression;
 
-public record FloatLiteral(Float value) implements Expression {
+public record FloatLiteral(Float value) implements Literal {
 }

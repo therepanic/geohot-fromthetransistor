@@ -1,4 +1,4 @@
 package com.therepanic.expression;
 
-public record IntLiteral(Integer value) implements Expression {
+public record IntLiteral(Integer value) implements Literal {
 }
