@@ -262,7 +262,7 @@ public class SimpleParser implements Parser {
             case "int" -> new IntLiteral(value == null ? null : value.intValue());
             case "long" -> new LongLiteral(value == null ? null : value.longValue());
             case "float" -> new FloatLiteral(value == null ? null : value.floatValue());
-            default -> throw new IllegalArgumentException("Unknown literal " + literal);
+            default -> throw new IllegalStateException("Unknown literal " + literal);
         };
     }
 
@@ -416,13 +416,13 @@ public class SimpleParser implements Parser {
             this.pos++;
             return expr;
         } else {
-            throw new RuntimeException("Unexpected token in expression: " + t.type());
+            throw new IllegalStateException("Unexpected token in expression: " + t.type());
         }
     }
 
     private void expectToken(List<Token> tokens, TokenType expected) {
         if (!tokens.get(this.pos).type().equals(expected)) {
-            throw new RuntimeException("Expected " + expected + " but got " + tokens.get(this.pos).type());
+            throw new IllegalStateException("Expected " + expected + " but got " + tokens.get(this.pos).type());
         }
     }
 
