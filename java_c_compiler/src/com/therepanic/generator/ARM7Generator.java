@@ -61,14 +61,17 @@ public class ARM7Generator implements Generator {
             int slot = localsMap.get(p.name());
             instructions.add("  str r" + i + ", [fp, #-" + slot + "]");
         }
+        int runningPos = 8;
         for (int i = 4; i < argCount; i++) {
             VarDeclaration p = functionStatement.parameters().get(i);
-            int posOff = 8 + 4 * (i - 4);
-            paramStackMap.put(p.name(), posOff);
+            int pSize = p.type() == null ? 4 : getTypeSize(p.type().baseType());
+            paramStackMap.put(p.name(), runningPos);
+            runningPos += pSize;
         }
         for (Statement statement : functionStatement.body()) {
-            instructions.addAll(generateBodyStatement(statement, localsMap, paramStackMap));
+            instructions.addAll(generateBodyStatement(functionStatement.name(), statement, localsMap, paramStackMap));
         }
+        instructions.add(functionStatement.name() + "_end:");
         if (offset > 4) {
             instructions.add("  add sp, sp, #" + (offset - 4));
         }
@@ -76,7 +79,7 @@ public class ARM7Generator implements Generator {
         return instructions;
     }
 
-    private List<String> generateBodyStatement(Statement statement,  Map<String, Integer> localsMap,  Map<String, Integer> paramStackMap) {
+    private List<String> generateBodyStatement(String functionName, Statement statement, Map<String, Integer> localsMap, Map<String, Integer> paramStackMap) {
         List<String> instructions = new ArrayList<>();
         if (statement instanceof VarDeclaration varDeclaration) {
             if (varDeclaration.value() != null) {
@@ -96,6 +99,13 @@ public class ARM7Generator implements Generator {
                     instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
                 }
             }
+        } else if (statement instanceof ReturnStatement returnStatement) {
+            if (returnStatement.value() != null) {
+                instructions.addAll(generateExpression(returnStatement.value(), localsMap, paramStackMap));
+            } else {
+                instructions.add("  mov r0, #0");
+            }
+            instructions.add("  b " + functionName + "_end");
         }
         return instructions;
     }
