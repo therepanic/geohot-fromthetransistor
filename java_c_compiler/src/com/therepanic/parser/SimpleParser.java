@@ -35,7 +35,13 @@ public class SimpleParser implements Parser {
     }
 
     private Statement parseFunction(List<Token> tokens) {
-        Variable returnType = new Variable(tokens.get(this.pos++).text());
+        String returnBaseType = tokens.get(this.pos++).text();
+        int returnPointerDepth = 0;
+        while (tokens.get(this.pos).type().equals(TokenType.MUL)) {
+            returnPointerDepth++;
+            this.pos++;
+        }
+        PointerType returnType = new PointerType(returnBaseType, returnPointerDepth);
         String name = tokens.get(this.pos++).text();
         this.pos++;
         List<VarDeclaration> parameters = new ArrayList<>();
@@ -44,8 +50,15 @@ public class SimpleParser implements Parser {
                 this.pos++;
                 continue;
             }
-            Expression argLiteral = convertLiteralStrToLiteral(tokens.get(this.pos++).text(), null);
-            parameters.add(new VarDeclaration(tokens.get(this.pos++).text(), argLiteral, null));
+            String baseType = tokens.get(this.pos++).text();
+            int pointerDepth = 0;
+            while (tokens.get(this.pos).type().equals(TokenType.MUL)) {
+                pointerDepth++;
+                this.pos++;
+            }
+            String varName = tokens.get(this.pos++).text();
+            PointerType type = new PointerType(baseType, pointerDepth);
+            parameters.add(new VarDeclaration(varName, null, type));
         }
         expectToken(tokens, TokenType.RPAREN);
         this.pos++;
