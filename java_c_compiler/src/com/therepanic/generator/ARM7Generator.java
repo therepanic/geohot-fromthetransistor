@@ -1,10 +1,7 @@
 package com.therepanic.generator;
 
 import com.therepanic.expression.*;
-import com.therepanic.statement.FunctionStatement;
-import com.therepanic.statement.Statement;
-import com.therepanic.statement.StructStatement;
-import com.therepanic.statement.VarDeclaration;
+import com.therepanic.statement.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -88,6 +85,15 @@ public class ARM7Generator implements Generator {
                     instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
                 } else {
                     instructions.add("  str r0, [fp, #" + paramStackMap.get(varDeclaration.name()) + "]");
+                }
+            }
+        } else if (statement instanceof Assign assign) {
+            if (assign.lhs() instanceof Variable variable) {
+                instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap));
+                if (localsMap.containsKey(variable.name())) {
+                    instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
+                } else {
+                    instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
                 }
             }
         }
