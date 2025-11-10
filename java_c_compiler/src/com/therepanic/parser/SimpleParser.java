@@ -5,6 +5,9 @@ import com.therepanic.Token;
 import com.therepanic.TokenType;
 import com.therepanic.expression.*;
 import com.therepanic.statement.*;
+import com.therepanic.type.PointerType;
+import com.therepanic.type.PrimitiveType;
+import com.therepanic.type.Type;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +44,12 @@ public class SimpleParser implements Parser {
             returnPointerDepth++;
             this.pos++;
         }
-        PointerType returnType = new PointerType(returnBaseType, returnPointerDepth);
+        Type returnType;
+        if (returnPointerDepth != 0) {
+            returnType = new PointerType(primitiveStrToPrimitive(returnBaseType), returnPointerDepth);
+        } else {
+            returnType = primitiveStrToPrimitive(returnBaseType);
+        }
         String name = tokens.get(this.pos++).text();
         this.pos++;
         List<VarDeclaration> parameters = new ArrayList<>();
@@ -57,7 +65,12 @@ public class SimpleParser implements Parser {
                 this.pos++;
             }
             String varName = tokens.get(this.pos++).text();
-            PointerType type = new PointerType(baseType, pointerDepth);
+            Type type;
+            if (pointerDepth != 0) {
+                type = new PointerType(primitiveStrToPrimitive(baseType), pointerDepth);
+            } else {
+                type = primitiveStrToPrimitive(baseType);
+            }
             parameters.add(new VarDeclaration(varName, null, type));
         }
         expectToken(tokens, TokenType.RPAREN);
@@ -105,7 +118,12 @@ public class SimpleParser implements Parser {
                         this.pos++;
                     }
                     String variableName = tokens.get(this.pos++).text();
-                    PointerType type = new PointerType(baseType, pointerDepth);
+                    Type type;
+                    if (pointerDepth != 0) {
+                        type = new PointerType(primitiveStrToPrimitive(baseType), pointerDepth);
+                    } else {
+                        type = primitiveStrToPrimitive(baseType);
+                    }
 
                     Expression value = null;
                     if (tokens.get(this.pos).type().equals(TokenType.ASSIGN)) {
@@ -255,7 +273,11 @@ public class SimpleParser implements Parser {
                 String fieldName = tokens.get(this.pos++).text();
                 expectToken(tokens, TokenType.SEMICOLON);
                 this.pos++;
-                fields.add(new VarDeclaration(fieldName, null, new PointerType(type, pointerDepth)));
+               if (pointerDepth != 0) {
+                   fields.add(new VarDeclaration(fieldName, null, new PointerType(primitiveStrToPrimitive(type), pointerDepth)));
+               } else {
+                   fields.add(new VarDeclaration(fieldName, null, primitiveStrToPrimitive(type)));
+               }
             } else {
                 throw new RuntimeException("Unexpected token in struct fields: " + tokens.get(this.pos).type());
             }
@@ -268,15 +290,6 @@ public class SimpleParser implements Parser {
         expectToken(tokens, TokenType.SEMICOLON);
         this.pos++;
         return new StructStatement(name, fields, typedef);
-    }
-
-    private Expression convertLiteralStrToLiteral(String literal, Number value) {
-        return switch (literal) {
-            case "int" -> new IntLiteral(value == null ? null : value.intValue());
-            case "long" -> new LongLiteral(value == null ? null : value.longValue());
-            case "float" -> new FloatLiteral(value == null ? null : value.floatValue());
-            default -> throw new IllegalStateException("Unknown literal " + literal);
-        };
     }
 
     private boolean isLiteral(String value) {
@@ -437,6 +450,15 @@ public class SimpleParser implements Parser {
         if (!tokens.get(this.pos).type().equals(expected)) {
             throw new IllegalStateException("Expected " + expected + " but got " + tokens.get(this.pos).type());
         }
+    }
+
+    private PrimitiveType primitiveStrToPrimitive(String primitiveStr) {
+        return switch (primitiveStr) {
+            case "int" -> PrimitiveType.INT;
+            case "float" -> PrimitiveType.FLOAT;
+            case "long" -> PrimitiveType.LONG;
+            default -> throw new IllegalStateException("Unexpected value: " + primitiveStr);
+        };
     }
 
 }

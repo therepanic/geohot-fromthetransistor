@@ -2,6 +2,8 @@ package com.therepanic.generator;
 
 import com.therepanic.expression.*;
 import com.therepanic.statement.*;
+import com.therepanic.type.PrimitiveType;
+import com.therepanic.type.Type;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,7 +50,7 @@ public class ARM7Generator implements Generator {
             }
         }
         for (VarDeclaration local : localsList) {
-            String baseType = local.type().baseType();
+            PrimitiveType baseType = local.type().baseType();
             int size = getTypeSize(baseType);
             localsMap.put(local.name(), offset);
             offset += size;
@@ -150,10 +152,10 @@ public class ARM7Generator implements Generator {
         }
     }
 
-    private int getTypeSize(String type) {
+    private int getTypeSize(PrimitiveType type) {
         return switch (type) {
-            case "int", "float" -> 4;
-            case "long" -> 8;
+            case INT, FLOAT -> 4;
+            case LONG -> 8;
             default -> throw new IllegalStateException("Unexpected value: " + type);
         };
     }
