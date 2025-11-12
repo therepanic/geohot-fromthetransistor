@@ -161,9 +161,15 @@ public class ARM7Generator implements Generator {
         List<String> instructions = new ArrayList<>();
         if (statement instanceof VarDeclaration varDeclaration) {
             if (varDeclaration.value() != null) {
+                PrimitiveType varDeclarationType = null;
+                if (varDeclaration.type() instanceof PrimitiveType primitiveType) {
+                    varDeclarationType = primitiveType;
+                } else if (varDeclaration.type() instanceof PointerType pointerType) {
+                    varDeclarationType = pointerType.baseType();
+                }
                 PrimitiveType allType = TypeResolver.inferType(varDeclaration.value(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(varDeclaration.value(), localsMap, paramStackMap, allType));
-                switch (allType) {
+                switch (varDeclarationType) {
                     case INT -> {
                         if (localsMap.containsKey(varDeclaration.name())) {
                             instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
