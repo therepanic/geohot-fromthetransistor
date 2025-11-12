@@ -46,6 +46,10 @@ public class ARM7Generator implements Generator {
             } else {
                 size = getTypeSize((PrimitiveType) p.type());
             }
+            //alignment
+            if (size == 8 && offset % 8 != 0) {
+                offset += 4;
+            }
             localsMap.put(p.name(), offset);
             offset += size;
         }
@@ -63,16 +67,41 @@ public class ARM7Generator implements Generator {
                 baseType = (PrimitiveType) local.type();
             }
             int size = getTypeSize(baseType);
+            //alignment
+            if (size == 8 && offset % 8 != 0) {
+                offset += 4;
+            }
             localsMap.put(local.name(), offset);
             offset += size;
         }
         if (offset > 4) {
             instructions.add("  sub sp, sp, #" + (offset - 4));
         }
+        int regIndex = 0;
         for (int i = 0; i < Math.min(4, argCount); i++) {
             VarDeclaration p = functionStatement.parameters().get(i);
             int slot = localsMap.get(p.name());
-            instructions.add("  str r" + i + ", [fp, #-" + slot + "]");
+            PrimitiveType type = null;
+            if (p.type() instanceof PrimitiveType primitiveType) {
+                type = primitiveType;
+            } else if (p.type() instanceof PointerType pointerType) {
+                type = pointerType.baseType();
+            }
+            switch (type) {
+                case INT -> {
+                    instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
+                    regIndex += 1;
+                }
+                case LONG -> {
+                    instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
+                    instructions.add("  str r" + (regIndex + 1) + ", [fp, #-" + (slot + 4) + "]");
+                    regIndex += 2;
+                }
+                case FLOAT -> {
+                    // todo
+                }
+                case null, default -> throw new IllegalStateException("Unexpected type: " + type);
+            }
         }
         int runningPos = 8;
         for (int i = 4; i < argCount; i++) {
@@ -134,29 +163,61 @@ public class ARM7Generator implements Generator {
             if (varDeclaration.value() != null) {
                 PrimitiveType allType = TypeResolver.inferType(varDeclaration.value(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(varDeclaration.value(), localsMap, paramStackMap, allType));
-                if (localsMap.containsKey(varDeclaration.name())) {
-                    instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
-                } else {
-                    instructions.add("  str r0, [fp, #" + paramStackMap.get(varDeclaration.name()) + "]");
+                switch (allType) {
+                    case INT -> {
+                        if (localsMap.containsKey(varDeclaration.name())) {
+                            instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
+                        } else {
+                            instructions.add("  str r0, [fp, #" + paramStackMap.get(varDeclaration.name()) + "]");
+                        }
+                    }
+                    case LONG -> {
+                        if (localsMap.containsKey(varDeclaration.name())) {
+                            instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
+                            instructions.add("  str r1, [fp, #-" + (localsMap.get(varDeclaration.name()) + 4) + "]");
+                        } else {
+                            instructions.add("  str r0, [fp, #" + paramStackMap.get(varDeclaration.name()) + "]");
+                            instructions.add("  str r1, [fp, #" + (paramStackMap.get(varDeclaration.name()) + 4) + "]");
+                        }
+                    }
+                    case FLOAT -> {
+                        //todo
+                    }
                 }
             }
         } else if (statement instanceof Assign assign) {
             if (assign.lhs() instanceof Variable variable) {
                 PrimitiveType allType = TypeResolver.inferType(assign.rhs(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, allType));
-                if (localsMap.containsKey(variable.name())) {
-                    instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
-                } else {
-                    instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
+                switch (allType) {
+                    case INT -> {
+                        if (localsMap.containsKey(variable.name())) {
+                            instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
+                        } else {
+                            instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
+                        }
+                    }
+                    case LONG -> {
+                        if (localsMap.containsKey(variable.name())) {
+                            instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
+                            instructions.add("  str r1, [fp, #-" + (localsMap.get(variable.name()) + 4) + "]");
+                        } else {
+                            instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
+                            instructions.add("  str r1, [fp, #" + (paramStackMap.get(variable.name()) + 4) + "]");
+                        }
+                    }
+                    case FLOAT -> {
+                        //todo
+                    }
                 }
             }
         } else if (statement instanceof ReturnStatement returnStatement) {
             if (returnStatement.value() != null) {
                 PrimitiveType allType = TypeResolver.inferType(returnStatement.value(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(returnStatement.value(), localsMap, paramStackMap, allType));
-                // todo long returning
             } else {
                 instructions.add("  mov r0, #0");
+                instructions.add("  mov r1, #0");
             }
             instructions.add("  b " + functionName + "_end");
         }
@@ -178,9 +239,24 @@ public class ARM7Generator implements Generator {
                     }
                     return List.of("    mov r0, #" + val);
                 }
-                case FLOAT, LONG -> {
+                case FLOAT -> {
                     //todo
                     throw new RuntimeException("Todo");
+                }
+                case LONG -> {
+                    long val = 0;
+                    if (literal instanceof IntLiteral(Integer value)) {
+                        val = value.longValue();
+                    } else if (literal instanceof LongLiteral(Long value)) {
+                        val = value;
+                    } else if (literal instanceof FloatLiteral(Float value)) {
+                        val = value.longValue();
+                    }
+                    int low = (int) val;
+                    int high = (int) (val >>> 32);
+                    String lowHex = "0x" + Integer.toHexString(low);
+                    String highHex = "0x" + Integer.toHexString(high);
+                    return List.of("    ldr r0, =" + lowHex, "    ldr r1, =" + highHex);
                 }
             }
         } else if (expression instanceof Variable variable) {
@@ -199,9 +275,25 @@ public class ARM7Generator implements Generator {
                         return instructions;
                     }
                 }
-                case FLOAT, LONG -> {
+                case FLOAT -> {
                     //todo
                     throw new RuntimeException("Todo");
+                }
+                case LONG -> {
+                    Integer slot = localsMap.get(variable.name());
+                    if (slot != null) {
+                        instructions.add("  ldr r0, [fp, #-" + slot + "]");
+                        instructions.add("  ldr r1, [fp, #-" + (slot + 4) + "]");
+                        return instructions;
+                    } else {
+                        Integer posOff = paramStackMap.get(variable.name());
+                        if (posOff == null) {
+                            throw new IllegalStateException("Unknown variable or param: " + variable.name());
+                        }
+                        instructions.add("  ldr r0, [fp, #" + posOff + "]");
+                        instructions.add("  ldr r1, [fp, #" + (posOff + 4) + "]");
+                        return instructions;
+                    }
                 }
             }
         } else if (expression instanceof BinaryExpression binaryExpression) {
@@ -221,9 +313,35 @@ public class ARM7Generator implements Generator {
                     instructions.add("  " + op + " r0, r1, r0");
                     return instructions;
                 }
-                case FLOAT, LONG -> {
+                case FLOAT -> {
                     //todo
                     throw new RuntimeException("Todo");
+                }
+                case LONG -> {
+                    instructions.addAll(generateExpression(binaryExpression.left(), localsMap, paramStackMap, allType));
+                    instructions.add("  push {r0, r1}");
+                    instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, allType));
+                    instructions.add("  pop {r2, r3}");
+                    switch (binaryExpression.op()) {
+                        case PLUS -> {
+                            instructions.add("  adds r0, r0, r2");
+                            instructions.add("  adc r1, r1, r3");
+                        }
+                        case MINUS -> {
+                            instructions.add("  subs r0, r0, r2");
+                            instructions.add("  sbc r1, r1, r3");
+                        }
+                        case MUL -> {
+                            instructions.add("  umull r0, r1, r0, r2");
+                        }
+                        case DIV -> {
+                            //todo IDK, there is no div with long in arm7 spec
+                            instructions.add("  mov r2, r0");
+                            instructions.add("  mov r3, r1");
+                            instructions.add("  bl __aeabi_ldivmod");
+                        }
+                    }
+                    return instructions;
                 }
             }
         }
