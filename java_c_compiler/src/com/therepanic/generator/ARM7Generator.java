@@ -93,6 +93,11 @@ public class ARM7Generator implements Generator {
                     regIndex += 1;
                 }
                 case LONG -> {
+                    if (regIndex % 2 != 0) regIndex++;
+                    if (regIndex + 1 >= 4) {
+                        //don't store from regs; these args are on stack
+                        continue;
+                    }
                     instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
                     instructions.add("  str r" + (regIndex + 1) + ", [fp, #-" + (slot + 4) + "]");
                     regIndex += 2;
@@ -193,9 +198,16 @@ public class ARM7Generator implements Generator {
             }
         } else if (statement instanceof Assign assign) {
             if (assign.lhs() instanceof Variable variable) {
+                Type variableType = localsTypes.get(variable.name());
+                PrimitiveType primitiveVariableType = null;
+                if (variableType instanceof PrimitiveType primitiveType) {
+                    primitiveVariableType = primitiveType;
+                } else if (variableType instanceof PointerType pointerType) {
+                    primitiveVariableType = pointerType.baseType();
+                }
                 PrimitiveType allType = TypeResolver.inferType(assign.rhs(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, allType));
-                switch (allType) {
+                switch (primitiveVariableType) {
                     case INT -> {
                         if (localsMap.containsKey(variable.name())) {
                             instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
@@ -243,7 +255,8 @@ public class ARM7Generator implements Generator {
                     } else if (literal instanceof FloatLiteral(Float value)) {
                         val = value.intValue();
                     }
-                    return List.of("    mov r0, #" + val);
+                    String hex = "0x" + Integer.toHexString(val);
+                    return List.of("    ldr r0, =" + hex);
                 }
                 case FLOAT -> {
                     //todo
@@ -330,20 +343,18 @@ public class ARM7Generator implements Generator {
                     instructions.add("  pop {r2, r3}");
                     switch (binaryExpression.op()) {
                         case PLUS -> {
-                            instructions.add("  adds r0, r0, r2");
-                            instructions.add("  adc r1, r1, r3");
+                            instructions.add("  adds r0, r2, r0");
+                            instructions.add("  adc r1, r3, r1");
                         }
                         case MINUS -> {
-                            instructions.add("  subs r0, r0, r2");
-                            instructions.add("  sbc r1, r1, r3");
+                            instructions.add("  subs r0, r2, r0");
+                            instructions.add("  sbc r1, r3, r1");
                         }
                         case MUL -> {
-                            instructions.add("  umull r0, r1, r0, r2");
+                            instructions.add("  smull r0, r1, r0, r2");
                         }
                         case DIV -> {
                             //todo IDK, there is no div with long in arm7 spec
-                            instructions.add("  mov r2, r0");
-                            instructions.add("  mov r3, r1");
                             instructions.add("  bl __aeabi_ldivmod");
                         }
                     }
