@@ -127,7 +127,7 @@ public class ARM7Generator implements Generator {
         Map<String, Type> localsTypes = getLocalsFromFunctionStatement(functionStatement);
 
         for (Statement statement : functionStatement.body()) {
-            instructions.addAll(generateBodyStatement(functionStatement.name(), statement, localsMap, paramStackMap, localsTypes));
+            instructions.addAll(generateBodyStatement(functionStatement, statement, localsMap, paramStackMap, localsTypes));
         }
         instructions.add(functionStatement.name() + "_end:");
         if (offset > 4) {
@@ -162,7 +162,7 @@ public class ARM7Generator implements Generator {
         return localsTypes;
     }
 
-    private List<String> generateBodyStatement(String functionName, Statement statement, Map<String, Integer> localsMap, Map<String, Integer> paramStackMap, Map<String, Type> localsTypes) {
+    private List<String> generateBodyStatement(FunctionStatement functionStatement, Statement statement, Map<String, Integer> localsMap, Map<String, Integer> paramStackMap, Map<String, Type> localsTypes) {
         List<String> instructions = new ArrayList<>();
         if (statement instanceof VarDeclaration varDeclaration) {
             if (varDeclaration.value() != null) {
@@ -184,9 +184,15 @@ public class ARM7Generator implements Generator {
                     }
                     case LONG -> {
                         if (localsMap.containsKey(varDeclaration.name())) {
+                            if (allType.equals(PrimitiveType.INT)) {
+                                instructions.add("  asr r1, r0, #31");
+                            }
                             instructions.add("  str r0, [fp, #-" + localsMap.get(varDeclaration.name()) + "]");
                             instructions.add("  str r1, [fp, #-" + (localsMap.get(varDeclaration.name()) + 4) + "]");
                         } else {
+                            if (allType.equals(PrimitiveType.INT)) {
+                                instructions.add("  asr r1, r0, #31");
+                            }
                             instructions.add("  str r0, [fp, #" + paramStackMap.get(varDeclaration.name()) + "]");
                             instructions.add("  str r1, [fp, #" + (paramStackMap.get(varDeclaration.name()) + 4) + "]");
                         }
@@ -217,9 +223,15 @@ public class ARM7Generator implements Generator {
                     }
                     case LONG -> {
                         if (localsMap.containsKey(variable.name())) {
+                            if (allType.equals(PrimitiveType.INT)) {
+                                instructions.add("  asr r1, r0, #31");
+                            }
                             instructions.add("  str r0, [fp, #-" + localsMap.get(variable.name()) + "]");
                             instructions.add("  str r1, [fp, #-" + (localsMap.get(variable.name()) + 4) + "]");
                         } else {
+                            if (allType.equals(PrimitiveType.INT)) {
+                                instructions.add("  asr r1, r0, #31");
+                            }
                             instructions.add("  str r0, [fp, #" + paramStackMap.get(variable.name()) + "]");
                             instructions.add("  str r1, [fp, #" + (paramStackMap.get(variable.name()) + 4) + "]");
                         }
@@ -231,13 +243,29 @@ public class ARM7Generator implements Generator {
             }
         } else if (statement instanceof ReturnStatement returnStatement) {
             if (returnStatement.value() != null) {
+                PrimitiveType funcStatementType = null;
+                if (functionStatement.returnType() instanceof PrimitiveType primitiveType) {
+                    funcStatementType = primitiveType;
+                } else if (functionStatement.returnType() instanceof PointerType pointerType) {
+                    funcStatementType = pointerType.baseType();
+                }
                 PrimitiveType allType = TypeResolver.inferType(returnStatement.value(), localsTypes, this.functions);
                 instructions.addAll(generateExpression(returnStatement.value(), localsMap, paramStackMap, allType));
+                switch (funcStatementType) {
+                    case LONG -> {
+                        if (allType.equals(PrimitiveType.INT)) {
+                            instructions.add("  asr r1, r0, #31");
+                        }
+                    }
+                    case FLOAT -> {
+                        //todo
+                    }
+                }
             } else {
                 instructions.add("  mov r0, #0");
                 instructions.add("  mov r1, #0");
             }
-            instructions.add("  b " + functionName + "_end");
+            instructions.add("  b " + functionStatement.name() + "_end");
         }
         return instructions;
     }
@@ -361,6 +389,23 @@ public class ARM7Generator implements Generator {
                     return instructions;
                 }
             }
+        } else if (expression instanceof UnaryMinusExpression unary) {
+            instructions.addAll(generateExpression(unary.inner(), localsMap, paramStackMap, allType));
+            switch (allType) {
+                case INT -> {
+                    instructions.add("  rsb r0, r0, #0");
+                }
+                case LONG -> {
+                    instructions.add("  mvn r0, r0");
+                    instructions.add("  mvn r1, r1");
+                    instructions.add("  adds r0, r0, #1");
+                    instructions.add("  adc r1, r1, #0");
+                }
+                case FLOAT -> {
+                    //todo
+                }
+            }
+            return instructions;
         }
         throw new IllegalStateException("Unexpected expression: " + expression);
     }
