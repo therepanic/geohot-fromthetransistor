@@ -38,18 +38,9 @@ public class ARM7Generator implements Generator {
         instructions.add("  push {fp, lr}");
         instructions.add("  add fp, sp, #0");
         int argCount = functionStatement.parameters().size();
-        for (int i = 0; i < Math.min(4, argCount); i++) {
-            VarDeclaration p = functionStatement.parameters().get(i);
-            int size;
-            if (p.type() instanceof PointerType ptr) {
-                size = getTypeSize(ptr.baseType());
-            } else {
-                size = getTypeSize((PrimitiveType) p.type());
-            }
-            //alignment
-            if (size == 8 && offset % 8 != 0) {
-                offset += 4;
-            }
+        for (VarDeclaration p : functionStatement.parameters()) {
+            int size = (p.type() instanceof PointerType) ? 4 : getTypeSize((PrimitiveType)p.type());
+            if (size == 8 && offset % 8 != 0) offset += 4;
             localsMap.put(p.name(), offset);
             offset += size;
         }
@@ -60,13 +51,12 @@ public class ARM7Generator implements Generator {
             }
         }
         for (VarDeclaration local : localsList) {
-            PrimitiveType baseType;
-            if (local.type() instanceof PointerType ptr) {
-                baseType = ptr.baseType();
+            int size;
+            if (local.type() instanceof PointerType) {
+                size = 4;
             } else {
-                baseType = (PrimitiveType) local.type();
+                size = getTypeSize((PrimitiveType) local.type());
             }
-            int size = getTypeSize(baseType);
             //alignment
             if (size == 8 && offset % 8 != 0) {
                 offset += 4;
@@ -78,49 +68,31 @@ public class ARM7Generator implements Generator {
             instructions.add("  sub sp, sp, #" + (offset - 4));
         }
         int regIndex = 0;
-        for (int i = 0; i < Math.min(4, argCount); i++) {
+        int runningPos = 8;
+        for (int i = 0; i < argCount; i++) {
             VarDeclaration p = functionStatement.parameters().get(i);
-            int slot = localsMap.get(p.name());
-            PrimitiveType type = null;
-            if (p.type() instanceof PrimitiveType primitiveType) {
-                type = primitiveType;
-            } else if (p.type() instanceof PointerType pointerType) {
-                type = pointerType.baseType();
-            }
-            switch (type) {
-                case INT -> {
+            if (p.type().equals(PrimitiveType.INT)) {
+                if (regIndex < 4) {
+                    int slot = localsMap.get(p.name());
                     instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
-                    regIndex += 1;
+                    regIndex++;
+                } else {
+                    paramStackMap.put(p.name(), runningPos);
+                    runningPos += 4;
                 }
-                case LONG -> {
-                    if (regIndex % 2 != 0) regIndex++;
-                    if (regIndex + 1 >= 4) {
-                        //don't store from regs; these args are on stack
-                        continue;
-                    }
+            } else if (p.type().equals(PrimitiveType.LONG)) {
+                if (regIndex < 3) {
+                    regIndex += regIndex % 2;
+                    int slot = localsMap.get(p.name());
                     instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
                     instructions.add("  str r" + (regIndex + 1) + ", [fp, #-" + (slot + 4) + "]");
-                    regIndex += 2;
+                    regIndex = 4;
+                } else {
+                    paramStackMap.put(p.name(), runningPos);
+                    runningPos += 8;
+                    regIndex = 4;
                 }
-                case FLOAT -> {
-                    // todo
-                }
-                case null, default -> throw new IllegalStateException("Unexpected type: " + type);
             }
-        }
-        int runningPos = 8;
-        for (int i = 4; i < argCount; i++) {
-            VarDeclaration p = functionStatement.parameters().get(i);
-            int size;
-            if (p.type() instanceof PointerType ptr) {
-                size = getTypeSize(ptr.baseType());
-            } else if (p.type() instanceof PrimitiveType primitive) {
-                size = getTypeSize(primitive);
-            } else {
-                size = 4;
-            }
-            paramStackMap.put(p.name(), runningPos);
-            runningPos += size;
         }
 
         // local types searching
@@ -135,31 +107,6 @@ public class ARM7Generator implements Generator {
         }
         instructions.add("  pop {fp, pc}");
         return instructions;
-    }
-
-    private Map<String, Type> getLocalsFromFunctionStatement(FunctionStatement functionStatement) {
-        Map<String, Type> localsTypes = new HashMap<>();
-        for (VarDeclaration p : functionStatement.parameters()) {
-            Type type;
-            if (p.type() instanceof PrimitiveType primitive) {
-                type = primitive;
-            } else {
-                type = ((PointerType) p.type()).baseType();
-            }
-            localsTypes.put(p.name(), type);
-        }
-        for (Statement s : functionStatement.body()) {
-            if (s instanceof VarDeclaration vd) {
-                Type type;
-                if (vd.type() instanceof PrimitiveType primitive) {
-                    type = primitive;
-                } else {
-                    type = ((PointerType) vd.type()).baseType();
-                }
-                localsTypes.put(vd.name(), type);
-            }
-        }
-        return localsTypes;
     }
 
     private List<String> generateBodyStatement(FunctionStatement functionStatement, Statement statement, Map<String, Integer> localsMap, Map<String, Integer> paramStackMap, Map<String, Type> localsTypes) {
@@ -416,6 +363,31 @@ public class ARM7Generator implements Generator {
             case LONG -> 8;
             default -> throw new IllegalStateException("Unexpected value: " + type);
         };
+    }
+
+    private Map<String, Type> getLocalsFromFunctionStatement(FunctionStatement functionStatement) {
+        Map<String, Type> localsTypes = new HashMap<>();
+        for (VarDeclaration p : functionStatement.parameters()) {
+            Type type;
+            if (p.type() instanceof PrimitiveType primitive) {
+                type = primitive;
+            } else {
+                type = ((PointerType) p.type()).baseType();
+            }
+            localsTypes.put(p.name(), type);
+        }
+        for (Statement s : functionStatement.body()) {
+            if (s instanceof VarDeclaration vd) {
+                Type type;
+                if (vd.type() instanceof PrimitiveType primitive) {
+                    type = primitive;
+                } else {
+                    type = ((PointerType) vd.type()).baseType();
+                }
+                localsTypes.put(vd.name(), type);
+            }
+        }
+        return localsTypes;
     }
 
 }
