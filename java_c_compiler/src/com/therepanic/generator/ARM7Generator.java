@@ -79,17 +79,22 @@ public class ARM7Generator implements Generator {
                 } else {
                     paramStackMap.put(p.name(), runningPos);
                     runningPos += 4;
+                    localsMap.remove(p.name());
                 }
             } else if (p.type().equals(PrimitiveType.LONG)) {
+                if (regIndex % 2 == 1) {
+                    regIndex++;
+                }
                 if (regIndex < 3) {
                     regIndex += regIndex % 2;
                     int slot = localsMap.get(p.name());
                     instructions.add("  str r" + regIndex + ", [fp, #-" + slot + "]");
                     instructions.add("  str r" + (regIndex + 1) + ", [fp, #-" + (slot + 4) + "]");
-                    regIndex = 4;
+                    regIndex += 2;
                 } else {
                     paramStackMap.put(p.name(), runningPos);
                     runningPos += 8;
+                    localsMap.remove(p.name());
                     regIndex = 4;
                 }
             }
@@ -120,7 +125,7 @@ public class ARM7Generator implements Generator {
                     varDeclarationType = pointerType.baseType();
                 }
                 PrimitiveType allType = TypeResolver.inferType(varDeclaration.value(), localsTypes, this.functions);
-                instructions.addAll(generateExpression(varDeclaration.value(), localsMap, paramStackMap, allType));
+                instructions.addAll(generateExpression(varDeclaration.value(), localsMap, paramStackMap, localsTypes, allType));
                 switch (varDeclarationType) {
                     case INT -> {
                         if (localsMap.containsKey(varDeclaration.name())) {
@@ -145,7 +150,7 @@ public class ARM7Generator implements Generator {
                         }
                     }
                     case FLOAT -> {
-                        //todo
+                        //todo: float
                     }
                 }
             }
@@ -159,7 +164,7 @@ public class ARM7Generator implements Generator {
                     primitiveVariableType = pointerType.baseType();
                 }
                 PrimitiveType allType = TypeResolver.inferType(assign.rhs(), localsTypes, this.functions);
-                instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, allType));
+                instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, localsTypes, allType));
                 switch (primitiveVariableType) {
                     case INT -> {
                         if (localsMap.containsKey(variable.name())) {
@@ -184,7 +189,7 @@ public class ARM7Generator implements Generator {
                         }
                     }
                     case FLOAT -> {
-                        //todo
+                        //todo: float
                     }
                 }
             }
@@ -197,7 +202,7 @@ public class ARM7Generator implements Generator {
                     funcStatementType = pointerType.baseType();
                 }
                 PrimitiveType allType = TypeResolver.inferType(returnStatement.value(), localsTypes, this.functions);
-                instructions.addAll(generateExpression(returnStatement.value(), localsMap, paramStackMap, allType));
+                instructions.addAll(generateExpression(returnStatement.value(), localsMap, paramStackMap, localsTypes, allType));
                 switch (funcStatementType) {
                     case LONG -> {
                         if (allType.equals(PrimitiveType.INT)) {
@@ -205,7 +210,7 @@ public class ARM7Generator implements Generator {
                         }
                     }
                     case FLOAT -> {
-                        //todo
+                        //todo: float
                     }
                 }
             } else {
@@ -217,7 +222,7 @@ public class ARM7Generator implements Generator {
         return instructions;
     }
 
-    private List<String> generateExpression(Expression expression, Map<String, Integer> localsMap,  Map<String, Integer> paramStackMap, PrimitiveType allType) {
+    private List<String> generateExpression(Expression expression, Map<String, Integer> localsMap,  Map<String, Integer> paramStackMap, Map<String, Type> localsTypes, PrimitiveType allType) {
         List<String> instructions = new ArrayList<>();
         if (expression instanceof Literal literal) {
             switch (allType) {
@@ -234,7 +239,7 @@ public class ARM7Generator implements Generator {
                     return List.of("    ldr r0, =" + hex);
                 }
                 case FLOAT -> {
-                    //todo
+                    //todo: float
                     throw new RuntimeException("Todo");
                 }
                 case LONG -> {
@@ -270,14 +275,20 @@ public class ARM7Generator implements Generator {
                     }
                 }
                 case FLOAT -> {
-                    //todo
+                    //todo: float
                     throw new RuntimeException("Todo");
                 }
                 case LONG -> {
+                    Type realType = localsTypes.get(variable.name());
+                    boolean isActuallyInt = realType instanceof PrimitiveType p && p == PrimitiveType.INT;
                     Integer slot = localsMap.get(variable.name());
                     if (slot != null) {
                         instructions.add("  ldr r0, [fp, #-" + slot + "]");
-                        instructions.add("  ldr r1, [fp, #-" + (slot + 4) + "]");
+                        if (isActuallyInt) {
+                            instructions.add("  asr r1, r0, #31");
+                        } else {
+                            instructions.add("  ldr r1, [fp, #-" + (slot + 4) + "]");
+                        }
                         return instructions;
                     } else {
                         Integer posOff = paramStackMap.get(variable.name());
@@ -285,7 +296,11 @@ public class ARM7Generator implements Generator {
                             throw new IllegalStateException("Unknown variable or param: " + variable.name());
                         }
                         instructions.add("  ldr r0, [fp, #" + posOff + "]");
-                        instructions.add("  ldr r1, [fp, #" + (posOff + 4) + "]");
+                        if (isActuallyInt) {
+                            instructions.add("  asr r1, r0, #31");
+                        } else {
+                            instructions.add("  ldr r1, [fp, #" + (posOff + 4) + "]");
+                        }
                         return instructions;
                     }
                 }
@@ -293,9 +308,9 @@ public class ARM7Generator implements Generator {
         } else if (expression instanceof BinaryExpression binaryExpression) {
             switch (allType) {
                 case INT -> {
-                    instructions.addAll(generateExpression(binaryExpression.left(), localsMap, paramStackMap, allType));
+                    instructions.addAll(generateExpression(binaryExpression.left(), localsMap, paramStackMap, localsTypes, allType));
                     instructions.add("  push {r0}");
-                    instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, allType));
+                    instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, localsTypes, allType));
                     instructions.add("  pop {r1}");
                     String op = switch (binaryExpression.op()) {
                         case PLUS -> "add";
@@ -308,13 +323,13 @@ public class ARM7Generator implements Generator {
                     return instructions;
                 }
                 case FLOAT -> {
-                    //todo
+                    //todo: float
                     throw new RuntimeException("Todo");
                 }
                 case LONG -> {
-                    instructions.addAll(generateExpression(binaryExpression.left(), localsMap, paramStackMap, allType));
+                    instructions.addAll(generateExpression(binaryExpression.left(), localsMap, paramStackMap, localsTypes, allType));
                     instructions.add("  push {r0, r1}");
-                    instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, allType));
+                    instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, localsTypes, allType));
                     instructions.add("  pop {r2, r3}");
                     switch (binaryExpression.op()) {
                         case PLUS -> {
@@ -326,10 +341,27 @@ public class ARM7Generator implements Generator {
                             instructions.add("  sbc r1, r3, r1");
                         }
                         case MUL -> {
-                            instructions.add("  smull r0, r1, r0, r2");
+                            //todo IDK, there is no mull 64x64  in arm7 spec
+                            instructions.add("  push {r4}");
+                            instructions.add("  mov  r4, r0");
+                            instructions.add("  mov  r0, r2");
+                            instructions.add("  mov  r2, r4");
+                            instructions.add("  mov  r4, r1");
+                            instructions.add("  mov  r1, r3");
+                            instructions.add("  mov  r3, r4");
+                            instructions.add("  pop  {r4}");
+                            instructions.add("  bl __aeabi_lmul");
                         }
                         case DIV -> {
                             //todo IDK, there is no div with long in arm7 spec
+                            instructions.add("  push {r4}");
+                            instructions.add("  mov  r4, r0");
+                            instructions.add("  mov  r0, r2");
+                            instructions.add("  mov  r2, r4");
+                            instructions.add("  mov  r4, r1");
+                            instructions.add("  mov  r1, r3");
+                            instructions.add("  mov  r3, r4");
+                            instructions.add("  pop  {r4}");
                             instructions.add("  bl __aeabi_ldivmod");
                         }
                     }
@@ -337,7 +369,7 @@ public class ARM7Generator implements Generator {
                 }
             }
         } else if (expression instanceof UnaryMinusExpression unary) {
-            instructions.addAll(generateExpression(unary.inner(), localsMap, paramStackMap, allType));
+            instructions.addAll(generateExpression(unary.inner(), localsMap, paramStackMap, localsTypes, allType));
             switch (allType) {
                 case INT -> {
                     instructions.add("  rsb r0, r0, #0");
@@ -349,9 +381,85 @@ public class ARM7Generator implements Generator {
                     instructions.add("  adc r1, r1, #0");
                 }
                 case FLOAT -> {
-                    //todo
+                    //todo: float
                 }
             }
+            return instructions;
+        } else if (expression instanceof FunctionCallExpression functionCall) {
+            FunctionStatement currentFunctionStatement = this.functions.get(functionCall.name());
+            if (currentFunctionStatement == null) {
+                throw new IllegalStateException("There is no " + functionCall.name() + "function");
+            }
+            List<PrimitiveType> primitiveTypes = new ArrayList<>();
+            int bytes = 0;
+            for (Expression arg : functionCall.args()) {
+                PrimitiveType type = TypeResolver.inferType(arg, localsTypes, this.functions);
+                primitiveTypes.add(type);
+                switch (type) {
+                    case INT, FLOAT -> bytes += 4;
+                    case LONG -> {
+                        if (bytes % 8 != 0) {
+                            bytes += 4;
+                        }
+                        bytes += 8;
+                    }
+                    case null, default -> throw new IllegalStateException("Unknown type: " + type);
+                }
+            }
+            if (bytes % 8 != 0) {
+                bytes += 4;
+            }
+            instructions.add("  push {r4, r5, r6, r7}");
+            if (bytes > 0) {
+                instructions.add("  sub sp, sp, #" + bytes);
+            }
+            int c = 0;
+            int offset = 0;
+            for (int i = 0; i < functionCall.args().size(); i++) {
+                Expression arg = functionCall.args().get(i);
+                PrimitiveType type = primitiveTypes.get(i);
+                instructions.addAll(generateExpression(arg, localsMap, paramStackMap, localsTypes, type));
+                switch (type) {
+                    case INT -> {
+                        if (c >= 4) {
+                            instructions.add("  str r0, [sp, #" + offset + "]");
+                            offset += 4;
+                        } else {
+                            instructions.add("  mov r" + (c + 4) + ", r0");
+                            c++;
+                        }
+                    }
+                    case LONG -> {
+                        if (c >= 3) {
+                            c = 4;
+                            if (offset % 8 != 0) {
+                                offset += 4;
+                            }
+                            instructions.add("  str r0, [sp, #" + offset + "]");
+                            instructions.add("  str r1, [sp, #" + (offset + 4) + "]");
+                            offset += 8;
+                        } else {
+                            if (c % 2 != 0) {
+                                c++;
+                            }
+                            instructions.add("  mov r" + (c + 4) + ", r0");
+                            instructions.add("  mov r" + (c + 4 + 1) + ", r1");
+                            c += 2;
+                        }
+                    }
+                    case FLOAT -> {
+                        //todo: float
+                    }
+                }
+            }
+            for (int i = 0; i < Math.min(c, 4); i++) {
+                instructions.add("  mov r" + i + ", r" + (i + 4));
+            }
+            instructions.add("  bl " + functionCall.name());
+            if (bytes > 0) {
+                instructions.add("  add sp, sp, #" + bytes);
+            }
+            instructions.add("  pop {r4, r5, r6, r7}");
             return instructions;
         }
         throw new IllegalStateException("Unexpected expression: " + expression);
