@@ -312,14 +312,43 @@ public class ARM7Generator implements Generator {
                     instructions.add("  push {r0}");
                     instructions.addAll(generateExpression(binaryExpression.right(), localsMap, paramStackMap, localsTypes, allType));
                     instructions.add("  pop {r1}");
-                    String op = switch (binaryExpression.op()) {
-                        case PLUS -> "add";
-                        case MINUS -> "sub";
-                        case MUL -> "mul";
-                        case DIV -> "sdiv";
+                    switch (binaryExpression.op()) {
+                        case PLUS -> instructions.add("  add"  + " r0, r1, r0");
+                        case MINUS -> instructions.add("  sub"  + " r0, r1, r0");
+                        case MUL -> instructions.add("  mul"  + " r0, r1, r0");
+                        case DIV -> instructions.add("  div"  + " r0, r1, r0");
+                        case GT -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movgt"  + " r0, #1");
+                        }
+                        case LT -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movlt"  + " r0, #1");
+                        }
+                        case GTE -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movgte"  + " r0, #1");
+                        }
+                        case LTE -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movlte"  + " r0, #1");
+                        }
+                        case EQ -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  moveq"  + " r0, #1");
+                        }
+                        case NEQ -> {
+                            instructions.add("  cmp"  + " r1, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movneq"  + " r0, #1");
+                        }
                         default -> throw new IllegalStateException("Unexpected operation: " + binaryExpression.op());
                     };
-                    instructions.add("  " + op + " r0, r1, r0");
                     return instructions;
                 }
                 case FLOAT -> {
@@ -363,6 +392,42 @@ public class ARM7Generator implements Generator {
                             instructions.add("  mov  r3, r4");
                             instructions.add("  pop  {r4}");
                             instructions.add("  bl __aeabi_ldivmod");
+                        }
+                        case GT -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movgt"  + " r0, #1");
+                        }
+                        case LT -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movlt"  + " r0, #1");
+                        }
+                        case GTE -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movgte"  + " r0, #1");
+                        }
+                        case LTE -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movlte"  + " r0, #1");
+                        }
+                        case EQ -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  moveq"  + " r0, #1");
+                        }
+                        case NEQ -> {
+                            instructions.add("  cmp"  + " r3, r1");
+                            instructions.add("  cmpeq"  + " r2, r0");
+                            instructions.add("  mov"  + " r0, #0");
+                            instructions.add("  movneq"  + " r0, #1");
                         }
                     }
                     return instructions;
