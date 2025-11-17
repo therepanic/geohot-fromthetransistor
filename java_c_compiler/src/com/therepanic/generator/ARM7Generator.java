@@ -16,6 +16,8 @@ public class ARM7Generator implements Generator {
 
     private final Map<String, FunctionStatement> functions = new HashMap<>();
 
+    private int labelCounter = 0;
+
     @Override
     public List<String> generate(Statement statement) {
         if (statement instanceof FunctionStatement functionStatement) {
@@ -218,6 +220,29 @@ public class ARM7Generator implements Generator {
                 instructions.add("  mov r1, #0");
             }
             instructions.add("  b " + functionStatement.name() + "_end");
+        } else if (statement instanceof IfStatement ifStatement) {
+            PrimitiveType allType = TypeResolver.inferType(ifStatement.cond(), localsTypes, this.functions);
+            instructions.addAll(generateExpression(ifStatement.cond(), localsMap, paramStackMap, localsTypes, allType));
+            instructions.add("  cmp r0, #0");
+            int currentLabel = this.labelCounter++;
+            if (ifStatement.elseBranch() == null) {
+                instructions.add("  beq L_end_" + currentLabel);
+                for (Statement s : ifStatement.thenBranch()) {
+                    instructions.addAll(generateBodyStatement(functionStatement, s, localsMap, paramStackMap, localsTypes));
+                }
+                instructions.add("  L_end_" + currentLabel + ":");
+            } else {
+                instructions.add("  beq L_else_" + currentLabel);
+                for (Statement s : ifStatement.thenBranch()) {
+                    instructions.addAll(generateBodyStatement(functionStatement, s, localsMap, paramStackMap, localsTypes));
+                }
+                instructions.add("  b L_end_" + currentLabel);
+                instructions.add("  L_else_" + currentLabel + ":");
+                for (Statement s : ifStatement.elseBranch()) {
+                    instructions.addAll(generateBodyStatement(functionStatement, s, localsMap, paramStackMap, localsTypes));
+                }
+                instructions.add("  L_end_" + currentLabel + ":");
+            }
         }
         return instructions;
     }
