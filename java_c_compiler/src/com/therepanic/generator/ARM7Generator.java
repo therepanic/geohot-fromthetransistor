@@ -16,7 +16,7 @@ public class ARM7Generator implements Generator {
 
     private final Map<String, FunctionStatement> functions = new HashMap<>();
 
-    private int labelCounter = 0;
+    private long labelCounter = 0;
 
     @Override
     public List<String> generate(Statement statement) {
@@ -224,7 +224,7 @@ public class ARM7Generator implements Generator {
             PrimitiveType allType = TypeResolver.inferType(ifStatement.cond(), localsTypes, this.functions);
             instructions.addAll(generateExpression(ifStatement.cond(), localsMap, paramStackMap, localsTypes, allType));
             instructions.add("  cmp r0, #0");
-            int currentLabel = this.labelCounter++;
+            long currentLabel = this.labelCounter++;
             if (ifStatement.elseBranch() == null) {
                 instructions.add("  beq L_end_" + currentLabel);
                 for (Statement s : ifStatement.thenBranch()) {
@@ -243,6 +243,18 @@ public class ARM7Generator implements Generator {
                 }
                 instructions.add("  L_end_" + currentLabel + ":");
             }
+        } else if (statement instanceof WhileStatement whileStatement) {
+            PrimitiveType allType = TypeResolver.inferType(whileStatement.cond(), localsTypes, this.functions);
+            long currentLabel = this.labelCounter++;
+            instructions.add("  loop_start_" + currentLabel + ":");
+            instructions.addAll(generateExpression(whileStatement.cond(), localsMap, paramStackMap, localsTypes, allType));
+            instructions.add("  cmp r0, #0");
+            instructions.add("  beq loop_end_" + currentLabel);
+            for (Statement s : whileStatement.body()) {
+                instructions.addAll(generateBodyStatement(functionStatement, s, localsMap, paramStackMap, localsTypes));
+            }
+            instructions.add("  b loop_start_" + currentLabel);
+            instructions.add("  loop_end_" + currentLabel + ":");
         }
         return instructions;
     }
