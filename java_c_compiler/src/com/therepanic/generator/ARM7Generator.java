@@ -255,6 +255,12 @@ public class ARM7Generator implements Generator {
             }
             instructions.add("  b loop_start_" + currentLabel);
             instructions.add("  loop_end_" + currentLabel + ":");
+        } else if (statement instanceof FunctionCallStatement functionCallStatement) {
+            FunctionCallExpression funcExpression = new FunctionCallExpression(
+                    functionCallStatement.name(),
+                    functionCallStatement.args()
+            );
+            instructions.addAll(generateExpression(funcExpression, localsMap, paramStackMap, localsTypes, null));
         }
         return instructions;
     }
