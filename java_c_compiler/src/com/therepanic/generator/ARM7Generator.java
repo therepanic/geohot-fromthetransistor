@@ -194,6 +194,45 @@ public class ARM7Generator implements Generator {
                         //todo: float
                     }
                 }
+            } else if (assign.lhs() instanceof DerefExpression derefExpression) {
+                PrimitiveType rhsType = TypeResolver.inferType(assign.rhs(), localsTypes, this.functions);
+                PrimitiveType targetType = TypeResolver.inferType(derefExpression, localsTypes, this.functions);
+                instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, localsTypes, rhsType));
+                if (rhsType == PrimitiveType.LONG) {
+                    instructions.add("  push {r0, r1}");
+                } else {
+                    instructions.add("  push {r0}");
+                }
+                Expression inner = derefExpression.inner();
+                if (inner instanceof Variable variable) {
+                    Integer slot = localsMap.get(variable.name());
+                    if (slot != null) {
+                        instructions.add("  ldr r0, [fp, #-" + slot + "]");
+                    } else {
+                        Integer pos = paramStackMap.get(variable.name());
+                        instructions.add("  ldr r0, [fp, #" + pos + "]");
+                    }
+                }
+                if (targetType.equals(PrimitiveType.LONG)) {
+                    if (rhsType.equals(PrimitiveType.LONG)) {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  str r2, [r0]");
+                        instructions.add("  str r3, [r0, #4]");
+                    } else {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  asr r3, r2, #31");
+                        instructions.add("  str r2, [r0]");
+                        instructions.add("  str r3, [r0, #4]");
+                    }
+                } else if (targetType.equals(PrimitiveType.INT)) {
+                    if (rhsType.equals(PrimitiveType.LONG)) {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  str r2, [r0]");
+                    } else {
+                        instructions.add("  pop {r1}");
+                        instructions.add("  str r1, [r0]");
+                    }
+                }
             }
         } else if (statement instanceof ReturnStatement returnStatement) {
             if (returnStatement.value() != null) {
@@ -568,6 +607,38 @@ public class ARM7Generator implements Generator {
                 instructions.add("  add sp, sp, #" + bytes);
             }
             instructions.add("  pop {r4, r5, r6, r7}");
+            return instructions;
+        } else if (expression instanceof AddressOfExpression addressOfExpression) {
+            Expression inner = addressOfExpression.inner();
+            if (inner instanceof Variable variable) {
+                Integer slot = localsMap.get(variable.name());
+                if (slot != null) {
+                    instructions.add("  add r0, fp, #-" + slot);
+                } else {
+                    Integer pos = paramStackMap.get(variable.name());
+                    instructions.add("  add r0, fp, #" + pos);
+                }
+            }
+            return instructions;
+        } else if (expression instanceof DerefExpression derefExpression) {
+            Expression inner = derefExpression.inner();
+
+            if (inner instanceof Variable variable) {
+                Integer slot = localsMap.get(variable.name());
+                if (slot != null) {
+                    instructions.add("  ldr r0, [fp, #-" + slot + "]");
+                } else {
+                    Integer pos = paramStackMap.get(variable.name());
+                    instructions.add("  ldr r0, [fp, #" + pos + "]");
+                }
+                PrimitiveType resultType = TypeResolver.inferType(derefExpression, localsTypes, this.functions);
+                if (resultType.equals(PrimitiveType.LONG)) {
+                    instructions.add("  ldr r1, [r0, #4]");
+                    instructions.add("  ldr r0, [r0]");
+                } else if (resultType.equals(PrimitiveType.INT)) {
+                    instructions.add("  ldr r0, [r0]");
+                }
+            }
             return instructions;
         }
         throw new IllegalStateException("Unexpected expression: " + expression);

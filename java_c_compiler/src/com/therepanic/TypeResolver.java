@@ -50,6 +50,8 @@ public final class TypeResolver {
             result = inferType(um.inner(), localsTypes, functions);
         } else if (expr instanceof DerefExpression de) {
             result = inferType(de.inner(), localsTypes, functions);
+        } else if (expr instanceof AddressOfExpression ad) {
+            result = inferType(ad.inner(), localsTypes, functions);
         } else {
             throw new IllegalStateException("Unhandled expression type in inferType: " + expr);
         }
