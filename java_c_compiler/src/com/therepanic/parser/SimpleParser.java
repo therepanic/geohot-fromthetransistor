@@ -5,6 +5,7 @@ import com.therepanic.Token;
 import com.therepanic.TokenType;
 import com.therepanic.expression.*;
 import com.therepanic.statement.*;
+import com.therepanic.type.ArrayType;
 import com.therepanic.type.PointerType;
 import com.therepanic.type.PrimitiveType;
 import com.therepanic.type.Type;
@@ -130,6 +131,17 @@ public class SimpleParser implements Parser {
                         this.pos++;
                         value = parseSimpleExpression(tokens);
                     }
+                    if (tokens.get(this.pos).type().equals(TokenType.LSQRTBRACE)) {
+                        this.pos++;
+                        int length = Integer.parseInt(tokens.get(this.pos).text());
+                        this.pos++;
+                        expectToken(tokens, TokenType.RSQRTBRACE);
+                        this.pos++;
+                        expectToken(tokens, TokenType.SEMICOLON);
+                        this.pos++;
+                        statements.add(new VarDeclaration(variableName, value, new ArrayType(primitiveStrToPrimitive(baseType), length)));
+                        continue;
+                    }
                     expectToken(tokens, TokenType.SEMICOLON);
                     this.pos++;
                     statements.add(new VarDeclaration(variableName, value, type));
@@ -140,6 +152,23 @@ public class SimpleParser implements Parser {
                 this.pos++;
                 TokenType type = tokens.get(this.pos).type();
                 switch (type) {
+                    case LSQRTBRACE -> {
+                        // if arr
+                        this.pos++;
+                        Expression index = parseSimpleExpression(tokens);
+                        expectToken(tokens, TokenType.RSQRTBRACE);
+                        this.pos++;
+                        //todo add more operations
+                        switch (tokens.get(this.pos).type()) {
+                            case ASSIGN -> {
+                                this.pos++;
+                                Expression value = parseSimpleExpression(tokens);
+                                statements.add(new Assign(new ArrayAccessExpression(name, index), value));
+                                expectToken(tokens, TokenType.SEMICOLON);
+                                this.pos++;
+                            }
+                        }
+                    }
                     case INCREMENT -> {
                         // a++
                         statements.add(new Assign(new Variable(name), new BinaryExpression(new Variable(name), new IntLiteral(1), Operator.PLUS)));

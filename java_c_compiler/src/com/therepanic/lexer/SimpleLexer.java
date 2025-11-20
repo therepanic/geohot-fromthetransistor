@@ -86,6 +86,8 @@ public class SimpleLexer implements Lexer {
                     case ")" -> TokenType.RPAREN;
                     case "{" -> TokenType.LBRACE;
                     case "}" -> TokenType.RBRACE;
+                    case "[" -> TokenType.LSQRTBRACE;
+                    case "]" -> TokenType.RSQRTBRACE;
                     case "<" -> TokenType.LT;
                     case "," -> TokenType.COMMA;
                     case ">" -> TokenType.GT;

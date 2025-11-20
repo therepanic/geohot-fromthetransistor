@@ -2,6 +2,7 @@ package com.therepanic;
 
 import com.therepanic.expression.*;
 import com.therepanic.statement.FunctionStatement;
+import com.therepanic.type.ArrayType;
 import com.therepanic.type.PointerType;
 import com.therepanic.type.PrimitiveType;
 import com.therepanic.type.Type;
@@ -23,11 +24,12 @@ public final class TypeResolver {
             Type type = localsTypes.get(v.name());
             if (type instanceof PrimitiveType primitive) {
                 result = primitive;
+            } else if (type instanceof PointerType pointerType) {
+                result = pointerType.baseType();
+            } else if (type instanceof ArrayType arrayType) {
+                result = arrayType.baseType();
             } else {
-                result = ((PointerType) type).baseType();
-            }
-            if (result == null) {
-                throw new IllegalStateException("Unexpected variable: " + v.name());
+                throw new IllegalStateException("There is no " + type + " support");
             }
         } else if (expr instanceof FunctionCallExpression fc) {
             Type ret = functions.get(fc.name()).returnType();
@@ -39,8 +41,12 @@ public final class TypeResolver {
             }
             if (ret instanceof PrimitiveType primitive) {
                 result = primitive;
+            } else if (ret instanceof PointerType pointer) {
+                result = pointer.baseType();
+            } else if (ret instanceof ArrayType array) {
+                result = array.baseType();
             } else {
-                result = ((PointerType) ret).baseType();
+                throw new IllegalArgumentException("There is no " + ret + " type");
             }
         } else if (expr instanceof BinaryExpression be) {
             Type lt = inferType(be.left(), localsTypes, functions);
@@ -52,6 +58,17 @@ public final class TypeResolver {
             result = inferType(de.inner(), localsTypes, functions);
         } else if (expr instanceof AddressOfExpression ad) {
             result = inferType(ad.inner(), localsTypes, functions);
+        } else if (expr instanceof ArrayAccessExpression arrayAccessExpression) {
+            Type type = localsTypes.get(arrayAccessExpression.name());
+            if (type instanceof PrimitiveType primitive) {
+                result = primitive;
+            } else if (type instanceof PointerType pointerType) {
+                result = pointerType.baseType();
+            } else if (type instanceof ArrayType arrayType) {
+                result = arrayType.baseType();
+            } else {
+                throw new IllegalStateException("There is no " + type + " support");
+            }
         } else {
             throw new IllegalStateException("Unhandled expression type in inferType: " + expr);
         }

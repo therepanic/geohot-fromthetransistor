@@ -17,6 +17,8 @@ public enum TokenType {
     RPAREN,
     LBRACE,
     RBRACE,
+    LSQRTBRACE,
+    RSQRTBRACE,
     GT, // >
     LT, // <
     GTE, // >=
@@ -30,5 +32,5 @@ public enum TokenType {
     RETURN,
     STRUCT,
     TYPEDEF,
-    AND
+    AND,
 }

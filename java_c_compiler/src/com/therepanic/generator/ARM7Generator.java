@@ -3,6 +3,7 @@ package com.therepanic.generator;
 import com.therepanic.TypeResolver;
 import com.therepanic.expression.*;
 import com.therepanic.statement.*;
+import com.therepanic.type.ArrayType;
 import com.therepanic.type.PointerType;
 import com.therepanic.type.PrimitiveType;
 import com.therepanic.type.Type;
@@ -56,8 +57,12 @@ public class ARM7Generator implements Generator {
             int size;
             if (local.type() instanceof PointerType) {
                 size = 4;
+            } else if (local.type() instanceof PrimitiveType primitiveType) {
+                size = getTypeSize(primitiveType);
+            } else if (local.type() instanceof ArrayType arrayType) {
+                size = getTypeSize(arrayType.baseType()) * arrayType.length();
             } else {
-                size = getTypeSize((PrimitiveType) local.type());
+                throw new IllegalStateException("No " + local.type() + " support");
             }
             //alignment
             if (size == 8 && offset % 8 != 0) {
@@ -213,6 +218,50 @@ public class ARM7Generator implements Generator {
                         instructions.add("  ldr r0, [fp, #" + pos + "]");
                     }
                 }
+                if (targetType.equals(PrimitiveType.LONG)) {
+                    if (rhsType.equals(PrimitiveType.LONG)) {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  str r2, [r0]");
+                        instructions.add("  str r3, [r0, #4]");
+                    } else {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  asr r3, r2, #31");
+                        instructions.add("  str r2, [r0]");
+                        instructions.add("  str r3, [r0, #4]");
+                    }
+                } else if (targetType.equals(PrimitiveType.INT)) {
+                    if (rhsType.equals(PrimitiveType.LONG)) {
+                        instructions.add("  pop {r2, r3}");
+                        instructions.add("  str r2, [r0]");
+                    } else {
+                        instructions.add("  pop {r1}");
+                        instructions.add("  str r1, [r0]");
+                    }
+                }
+            } else if (assign.lhs() instanceof ArrayAccessExpression arrayAccessExpression) {
+                PrimitiveType rhsType = TypeResolver.inferType(assign.rhs(), localsTypes, this.functions);
+                PrimitiveType targetType = TypeResolver.inferType(arrayAccessExpression, localsTypes, this.functions);
+                instructions.addAll(generateExpression(assign.rhs(), localsMap, paramStackMap, localsTypes, rhsType));
+                if (rhsType == PrimitiveType.LONG) {
+                    instructions.add("  push {r0, r1}");
+                } else {
+                    instructions.add("  push {r0}");
+                }
+                Integer slot = localsMap.get(arrayAccessExpression.name());
+                if (slot != null) {
+                    instructions.add("  ldr r0, [fp, #-" + slot + "]");
+                } else {
+                    Integer pos = paramStackMap.get(arrayAccessExpression.name());
+                    instructions.add("  ldr r0, [fp, #" + pos + "]");
+                }
+                PrimitiveType indexType = PrimitiveType.INT;
+                instructions.add("  mov r2, r0");
+                instructions.addAll(generateExpression(arrayAccessExpression.index(), localsMap, paramStackMap, localsTypes, indexType ));
+                instructions.add("  mov r1, r0");
+                int elemSize = getTypeSize((PrimitiveType) localsTypes.get(arrayAccessExpression.name()));
+                instructions.add("  mul r1, r1, #" + elemSize);
+                instructions.add("  add r0, r2, r1");
+
                 if (targetType.equals(PrimitiveType.LONG)) {
                     if (rhsType.equals(PrimitiveType.LONG)) {
                         instructions.add("  pop {r2, r3}");
@@ -640,6 +689,24 @@ public class ARM7Generator implements Generator {
                 }
             }
             return instructions;
+        } else if (expression instanceof ArrayAccessExpression arr) {
+            String name = arr.name();
+            int baseSlot = localsMap.get(name);
+            PrimitiveType elemType = (PrimitiveType) localsTypes.get(name);
+            int elemSize = getTypeSize(elemType);
+            instructions.addAll(generateExpression(arr.index(), localsMap, paramStackMap, localsTypes, PrimitiveType.INT));
+            instructions.add("  mov r1, r0");
+            instructions.add("  add r0, fp, #-" + baseSlot);
+            instructions.add("  mul r1, r1, #" + elemSize);
+            instructions.add("  add r0, r0, r1");
+            if (elemType == PrimitiveType.INT) {
+                instructions.add("  ldr r0, [r0]");
+            } else if (elemType == PrimitiveType.LONG) {
+                instructions.add("  mov r2, r0");
+                instructions.add("  ldr r0, [r2]");
+                instructions.add("  ldr r1, [r2, #4]");
+            }
+            return instructions;
         }
         throw new IllegalStateException("Unexpected expression: " + expression);
     }
@@ -658,8 +725,12 @@ public class ARM7Generator implements Generator {
             Type type;
             if (p.type() instanceof PrimitiveType primitive) {
                 type = primitive;
+            } else if (p.type() instanceof PointerType pointerType) {
+                type = pointerType.baseType();
+            } else if (p.type() instanceof ArrayType arrayType) {
+                type = arrayType.baseType();
             } else {
-                type = ((PointerType) p.type()).baseType();
+                throw new IllegalStateException("There is no " + p.type() + " support");
             }
             localsTypes.put(p.name(), type);
         }
@@ -668,8 +739,12 @@ public class ARM7Generator implements Generator {
                 Type type;
                 if (vd.type() instanceof PrimitiveType primitive) {
                     type = primitive;
+                } else if (vd.type() instanceof PointerType pointerType) {
+                    type = pointerType.baseType();
+                } else if (vd.type() instanceof ArrayType arrayType) {
+                    type = arrayType.baseType();
                 } else {
-                    type = ((PointerType) vd.type()).baseType();
+                    throw new IllegalStateException("There is no " + vd.type() + " support");
                 }
                 localsTypes.put(vd.name(), type);
             }
