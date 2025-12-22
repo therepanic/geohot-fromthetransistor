@@ -8,6 +8,7 @@ data Pos = Pos
 data Token
     = TokIdent String Pos
     | TokInt Int Pos
+    | TokLong Integer Pos
     | TokPlus Pos
     | TokMinus Pos
     | TokSlash Pos
