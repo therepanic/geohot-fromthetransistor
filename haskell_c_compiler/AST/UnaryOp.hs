@@ -1,0 +1,3 @@
+data UnaryOp
+  = Neg
+  | Not
