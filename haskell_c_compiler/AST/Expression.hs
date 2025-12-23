@@ -1,9 +1,9 @@
-module Expression where
+module AST.Expression where
 
-import Operator
-import Literal
-import UnaryOp
-import Type
+import AST.Operator
+import AST.Lit
+import AST.UnaryOp
+import AST.Type
 
 data Expression
     = AddressOf Expression
@@ -16,5 +16,5 @@ data Expression
     | UnaryOp UnaryOp Expression
     | Binary Operator Expression Expression
 
-    | Literal Literal
+    | Literal Lit
     | Var String
