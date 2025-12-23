@@ -26,4 +26,29 @@ parsePrimary (TokLParen _ : ts) =
     in
         case rest of
             TokRParen _ : bx -> (a, bx)
-            _ -> error "Expected ) rparen"
+            _ -> error "Expected ')'"
+
+parsePostfix :: Expression -> [Token] -> (Expression, [Token])
+parsePostfix e (TokLParen t:ts) =
+    let
+        parseArgs :: [Token] -> ([Expression], [Token])
+        parseArgs (TokRParen _ : rest) =
+            ([], rest)
+        parseArgs tokens =
+            let
+                (arg, rest) = parseExpr tokens
+            in
+                case rest of
+                    TokComma _ : rest' ->
+                        let
+                            (args, rest'') = parseArgs rest'
+                        in
+                            (arg:args, rest'')
+                    TokRParen _ : rest' -> 
+                        ([arg], rest')
+                    _ -> 
+                        error "Expected ',' or ')'"
+        (args, rest) = parseArgs ts
+        callExpr = Call e args
+    in
+        parsePostfix callExpr rest

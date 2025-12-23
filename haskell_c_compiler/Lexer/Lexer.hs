@@ -22,6 +22,7 @@ lex p = go p
             | c == '(' = TokLParen p : go p{ col = col p + 1 } cs
             | c == ')' = TokRParen p : go p{ col = col p + 1 } cs
             | c == ';' = TokSemicolon p : go p{col = col p + 1} cs
+            | c == ',' = TokSemicolon p : go p{col = col p + 1} cs
             | otherwise = error ("Unexpected character '" ++ [c] ++ "' at " ++ show p)
 
 lexDig :: Pos -> String -> [Token]
