@@ -1,6 +1,6 @@
-module Lexer where
+module Lexer.Lexer where
 
-import Token
+import Lexer.Token
 import Data.Char
 
 -- toy lexer (no comments support now)
@@ -29,11 +29,11 @@ lexDig p s =
     let
         (f, s) = span isDigit s
     in
-        TokNum f p : Lexer.lex p{ col = col p + length f } s
+        TokNum f p : Lexer.Lexer.lex p{ col = col p + length f } s
 
 lexIdent :: Pos -> String -> [Token]
 lexIdent p s =
     let
         (f, s) = span isAlphaNum s
     in
-        TokIdent f p : Lexer.lex p{ col = col p + length f } s
+        TokIdent f p : Lexer.Lexer.lex p{ col = col p + length f } s
