@@ -8,6 +8,84 @@ import AST.Statement
 import AST.Operator
 import Lexer.Token
 
+-- STATEMENTS PARSING
+parseStatement :: [Token] -> (Statement, [Token])
+parseStatement (TokIdent "if" t : ts) = parseIf (TokIdent "if" t : ts)
+parseStatement (TokIdent "while" t : ts) = parseWhile (TokIdent "while" t : ts)
+parseStatement (TokIdent "return" t : ts) = parseReturn (TokIdent "return" t : ts)
+parseStatement ts = parseExprStatement ts
+
+-- Statement if parsing
+parseIf :: [Token] -> (Statement, [Token])
+parseIf (TokIdent "if" _ : TokLParen _ : ts) =
+    let
+        (cond, rest1) = parseExpr ts
+    in
+        case rest1 of
+            TokRParen _ : rest2 ->
+                let
+                    (ifBody, rest3) = parseBlock rest2
+                in
+                    case rest3 of
+                        TokIdent "else" _ : rest4 ->
+                            let
+                                (elseBody, rest5) = parseBlock rest4
+                            in
+                                (If cond ifBody elseBody, rest5)
+
+                        _ -> (If cond ifBody [], rest3)
+            _ -> error "expected ')'"
+parseIf _ = error "Expected 'if'"
+
+-- Statement while parsing
+parseWhile :: [Token] -> (Statement, [Token])
+parseWhile (TokIdent "while" _ : TokLParen _ : ts) =
+    let
+        (cond, rest1) = parseExpr ts
+    in
+        case rest1 of
+            TokRParen _ : rest2 ->
+                let
+                    (body, rest3) = parseBlock rest2
+                in
+                    (While cond body, rest3)
+            _ -> error "Expected ')'"
+parseWhile _ = error "Expected 'while'"
+
+-- Statement return parsing
+parseReturn :: [Token] -> (Statement, [Token])
+parseReturn (TokIdent "return" _ : TokSemicolon _ : ts) = (Return Nothing, ts)
+parseReturn (TokIdent "return" _ : ts) =
+    let
+        (expr, TokSemicolon _ : rest) = parseExpr ts
+    in
+        case rest of
+            TokSemicolon _ : rest1 -> (Return (Just expr), rest1)
+            _ -> error "Expected ';'"
+
+-- Statement block parsing
+parseBlock :: [Token] -> ([Statement], [Token])
+parseBlock (TokLBrace _ : ts) = go ts
+  where
+    go (TokRBrace _ : rest) = ([], rest)
+    go tokens =
+      let
+        (stmt, rest) = parseStatement tokens
+        (stmts, rest') = go rest
+      in
+        (stmt : stmts, rest')
+
+-- Statement Expression parsing
+parseExprStatement :: [Token] -> (Statement, [Token])
+parseExprStatement ts =
+    let
+        (expr, rest) = parseExpr ts
+    in
+        case rest of
+            TokSemicolon _ : rest' ->
+                (ExprStmt expr, rest')
+            _ -> error "Expected ';'"
+
 -- EXPRESSIONS PARSING
 parseExpr :: [Token] -> (Expression, [Token])
 parseExpr = parseAdditive
@@ -18,19 +96,19 @@ parseAdditive ts =
     let
         (left, rest) = parseMultiplicative ts
     in
-        parseAddictive' left rest
+        parseAdditive' left rest
 parseAdditive' :: Expression -> [Token] -> (Expression, [Token])
 parseAdditive' left (TokPlus _ : ts) =
     let
         (right, rest) = parseMultiplicative ts
     in
-        parseAddictive' (Binary Plus left right) rest
-parseAddictive' left (TokMinus _ : ts) =
+        parseAdditive' (Binary Plus left right) rest
+parseAdditive' left (TokMinus _ : ts) =
     let
         (right, rest) = parseMultiplicative ts
     in
-        parseAddictive' (Binary Minus left right) rest
-parseAddictive' left ts = (left, ts)
+        parseAdditive' (Binary Minus left right) rest
+parseAdditive' left ts = (left, ts)
 
 -- Expression Multiplication parsing
 parseMultiplicative :: [Token] -> (Expression, [Token])
@@ -67,19 +145,21 @@ parseType (TokIdent "long" _ : ts) =
 parseType _ = error "expected type"
 
 parseUnary :: [Token] -> (Expression, [Token])
-parseUnary (TokLParen _ : ts) =
+parseUnary (TokLParen t : ts) =
     case ts of
-        TokIdent _ _ : _ ->
+        tok : _ | isTypeName tok ->
             let
                 (ty, rest1) = parseType ts
             in
                 case rest1 of
                     TokRParen _ : rest2 ->
-                        let (expr, rest3) = parseUnary rest2
-                        in (Cast ty expr, rest3)
+                        let
+                            (expr, rest3) = parseUnary rest2
+                        in
+                            (Cast ty expr, rest3)
                     _ -> error "expected ')'"
         _ ->
-            parsePostfix (TokLParen undefined : ts)
+            parsePostfix (TokLParen t : ts)
 parseUnary (TokMinus _ : ts) =
     let
         (e, tokens) = parseUnary ts
@@ -113,8 +193,7 @@ parsePostfix' :: Expression -> [Token] -> (Expression, [Token])
 parsePostfix' e (TokLParen t:ts) =
     let
         parseArgs :: [Token] -> ([Expression], [Token])
-        parseArgs (TokRParen _ : rest) =
-            ([], rest)
+        parseArgs (TokRParen _ : rest) = ([], rest)
         parseArgs tokens =
             let
                 (arg, rest) = parseExpr tokens
@@ -125,9 +204,9 @@ parsePostfix' e (TokLParen t:ts) =
                             (args, rest'') = parseArgs rest'
                         in
                             (arg:args, rest'')
-                    TokRParen _ : rest' -> 
+                    TokRParen _ : rest' ->
                         ([arg], rest')
-                    _ -> 
+                    _ ->
                         error "Expected ',' or ')'"
         (args, rest) = parseArgs ts
         callExpr = Call e args
