@@ -11,9 +11,9 @@ data Expression
 
     | Cast Type Expression
 
-    | Call String [Expression]
+    | Call Expression [Expression]
 
-    | UnaryOp UnaryOp Expression
+    | UnaryOp Expression
     | Binary Operator Expression Expression
 
     | Literal Lit
