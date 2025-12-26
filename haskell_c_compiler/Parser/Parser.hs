@@ -6,6 +6,7 @@ import AST.Lit
 import AST.Type
 import AST.Statement
 import AST.Operator
+import AST.VarDecl
 import Lexer.Token
 
 -- STATEMENTS PARSING
@@ -13,7 +14,39 @@ parseStatement :: [Token] -> (Statement, [Token])
 parseStatement (TokIdent "if" t : ts) = parseIf (TokIdent "if" t : ts)
 parseStatement (TokIdent "while" t : ts) = parseWhile (TokIdent "while" t : ts)
 parseStatement (TokIdent "return" t : ts) = parseReturn (TokIdent "return" t : ts)
-parseStatement ts = parseExprStatement ts
+parseStatement (t:ts) =
+    let
+        isType = isTypeName t
+    in
+        if isType then parseVarDecl (t:ts) else parseExprStatement (t:ts)
+
+-- Statement var declaration parsing
+parseVarDecl :: [Token] -> (Statement, [Token])
+parseVarDecl ts =
+    let
+        (ty, rest1) = parseType ts
+    in
+        case rest1 of
+            TokIdent name _ : rest2 ->
+                case rest2 of
+                    TokSemicolon _ : rest3 ->
+                        (VarDeclStmt (VarDecl name ty Nothing), rest3)
+
+                    TokAssign _ : rest3 ->
+                        let
+                            (expr, rest4) = parseExpr rest3
+                        in
+                            case rest4 of
+                                TokSemicolon _ : rest5 ->
+                                    (VarDeclStmt (VarDecl name ty (Just expr)), rest5)
+                                _ ->
+                                    error "expected ';' after initializer"
+
+                    _ ->
+                        error "expected ';' or '=' after variable name"
+
+            _ ->
+                error "expected variable name"
 
 -- Statement if parsing
 parseIf :: [Token] -> (Statement, [Token])
@@ -131,19 +164,6 @@ parseMultiplicative' left (TokSlash _ : ts) =
 parseMultiplicative' left ts = (left, ts)
 
 -- Expression Unary parsing
--- Check if it type name
-isTypeName :: Token -> Bool
-isTypeName (TokIdent "int" _) = True
-isTypeName (TokIdent "long" _) = True
-isTypeName _ = False
--- Parse type
-parseType :: [Token] -> (Type, [Token])
-parseType (TokIdent "int" _ : ts) =
-    (PrimitiveType Int, ts)
-parseType (TokIdent "long" _ : ts) =
-    (PrimitiveType Long, ts)
-parseType _ = error "expected type"
-
 parseUnary :: [Token] -> (Expression, [Token])
 parseUnary (TokLParen t : ts) =
     case ts of
@@ -225,3 +245,19 @@ parsePrimary (TokLParen _ : ts) =
             _ -> error "Expected ')'"
 parsePrimary (TokIdent val _ : ts) = (Var val, ts)
 parsePrimary (TokNum val _ : ts) = (Literal (LNum val), ts)
+
+-- HELPERS
+
+-- Check if it type name
+isTypeName :: Token -> Bool
+isTypeName (TokIdent "int" _) = True
+isTypeName (TokIdent "long" _) = True
+
+isTypeName _ = False
+-- Parse type
+parseType :: [Token] -> (Type, [Token])
+parseType (TokIdent "int" _ : ts) =
+    (PrimitiveType Int, ts)
+parseType (TokIdent "long" _ : ts) =
+    (PrimitiveType Long, ts)
+parseType _ = error "expected type"
