@@ -1,6 +1,7 @@
 module Parser.Parser where
 
 import qualified AST.UnaryOp as U
+import qualified AST.Statement as F
 import AST.Expression
 import AST.Lit
 import AST.Type
@@ -18,17 +19,59 @@ parseStatement (t:ts) =
     let
         isType = isTypeName t
     in
-        if isType then parseVarDecl (t:ts) else
-            let
-                -- todo evaluates the expression twice before '='
-                (e, rest) = parseExpr (t:ts)
-            in
-                case rest of
-                    TokAssign _ : rest' -> parseAssign (t:ts)
-                    _ -> parseExprStatement (t:ts)
+        if isType 
+            then 
+                let
+                    (typ, rest) = parseType (t:ts)
+                in
+                    case rest of
+                        (TokIdent name _ : TokLParen _ : rest') -> parseFunction (t:ts)
+                        _ -> parseVarDecl (t:ts)
+            else
+                let
+                    -- todo evaluates the expression twice before '='
+                    (e, rest) = parseExpr (t:ts)
+                in
+                    case rest of
+                        TokAssign _ : rest' -> parseAssign (t:ts)
+                        _ -> parseExprStatement (t:ts)
 parseStatement [] = error "Unexpected end of input"
 
--- Statement assign parsing
+-- Statement function parsing
+parseParamList :: [Token] -> ([VarDecl], [Token])
+parseParamList (TokRParen _ : rest) = ([], rest)
+parseParamList tokens =
+    let
+        (ty, rest1) = parseType tokens
+    in
+        case rest1 of
+            TokIdent name _ : rest2 ->
+                let
+                    param = VarDecl name ty Nothing
+                in
+                    case rest2 of
+                        TokComma _ : rest3 ->
+                            let
+                                (params, rest4) = parseParamList rest3
+                            in
+                                (param : params, rest4)
+                        TokRParen _ : rest3 -> ([param], rest3)
+                        _ -> error "Expected ',' or ')' after parameter"
+            _ -> error "Expected parameter name after type"
+parseFunction :: [Token] -> (Statement, [Token])
+parseFunction tokens =
+    let
+        (ty, rest1) = parseType tokens
+    in
+        case rest1 of
+            TokIdent name _ : TokLParen _ : rest2 ->
+                let
+                    (v, rest3) = parseParamList rest2
+                    (v1, rest4) = parseBlock rest3
+                in
+                    (Function ty name v v1, rest4)
+            _ -> error "Expected function name and '(' after type"
+
 parseAssign :: [Token] -> (Statement, [Token])
 parseAssign ts =
     let
@@ -277,6 +320,7 @@ parsePrimary (TokNum val _ : ts) = (Literal (LNum val), ts)
 isTypeName :: Token -> Bool
 isTypeName (TokIdent "int" _) = True
 isTypeName (TokIdent "long" _) = True
+isTypeName (TokIdent "void" _) = True
 
 isTypeName _ = False
 -- Parse type
@@ -285,4 +329,6 @@ parseType (TokIdent "int" _ : ts) =
     (PrimitiveType Int, ts)
 parseType (TokIdent "long" _ : ts) =
     (PrimitiveType Long, ts)
+parseType (TokIdent "void" _ : ts) =
+    (PrimitiveType Void, ts)
 parseType _ = error "expected type"
