@@ -18,7 +18,32 @@ parseStatement (t:ts) =
     let
         isType = isTypeName t
     in
-        if isType then parseVarDecl (t:ts) else parseExprStatement (t:ts)
+        if isType then parseVarDecl (t:ts) else
+            let
+                -- todo evaluates the expression twice before '='
+                (e, rest) = parseExpr (t:ts)
+            in
+                case rest of
+                    TokAssign _ : rest' -> parseAssign (t:ts)
+                    _ -> parseExprStatement (t:ts)
+parseStatement [] = error "Unexpected end of input"
+
+-- Statement assign parsing
+parseAssign :: [Token] -> (Statement, [Token])
+parseAssign ts =
+    let
+        (e, rest) = parseExpr ts
+    in
+        case rest of
+            TokAssign _ : rest' ->
+                let
+                    (e', rest'') = parseExpr rest'
+                in
+                    case rest'' of
+                        TokSemicolon _ : rest''' ->
+                            (Assign e e', rest''')
+                        _ -> error "Expected ';' after assignment"
+            _ -> error "Expected '=' after expression"
 
 -- Statement var declaration parsing
 parseVarDecl :: [Token] -> (Statement, [Token])
@@ -40,13 +65,13 @@ parseVarDecl ts =
                                 TokSemicolon _ : rest5 ->
                                     (VarDeclStmt (VarDecl name ty (Just expr)), rest5)
                                 _ ->
-                                    error "expected ';' after initializer"
+                                    error "Expected ';' after initializer"
 
                     _ ->
-                        error "expected ';' or '=' after variable name"
+                        error "Expected ';' or '=' after variable name"
 
             _ ->
-                error "expected variable name"
+                error "Expected variable name"
 
 -- Statement if parsing
 parseIf :: [Token] -> (Statement, [Token])
