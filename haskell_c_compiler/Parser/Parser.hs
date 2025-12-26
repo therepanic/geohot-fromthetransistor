@@ -12,9 +12,9 @@ import Lexer.Token
 
 -- STATEMENTS PARSING
 parseStatement :: [Token] -> (Statement, [Token])
-parseStatement (TokIdent "if" t : ts) = parseIf (TokIdent "if" t : ts)
-parseStatement (TokIdent "while" t : ts) = parseWhile (TokIdent "while" t : ts)
-parseStatement (TokIdent "return" t : ts) = parseReturn (TokIdent "return" t : ts)
+parseStatement toks@(TokIdent "if" t : ts) = parseIf toks
+parseStatement toks@(TokIdent "while" t : ts) = parseWhile toks
+parseStatement toks@(TokIdent "return" t : ts) = parseReturn toks
 parseStatement (t:ts) =
     let
         isType = isTypeName t
@@ -167,14 +167,14 @@ parseReturn (TokIdent "return" _ : ts) =
 -- Statement block parsing
 parseBlock :: [Token] -> ([Statement], [Token])
 parseBlock (TokLBrace _ : ts) = go ts
-  where
-    go (TokRBrace _ : rest) = ([], rest)
-    go tokens =
-      let
-        (stmt, rest) = parseStatement tokens
-        (stmts, rest') = go rest
-      in
-        (stmt : stmts, rest')
+    where
+        go (TokRBrace _ : rest) = ([], rest)
+        go tokens =
+            let
+                (stmt, rest) = parseStatement tokens
+                (stmts, rest') = go rest
+            in
+                (stmt : stmts, rest')
 
 -- Statement Expression parsing
 parseExprStatement :: [Token] -> (Statement, [Token])
