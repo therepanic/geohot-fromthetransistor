@@ -1,13 +1,13 @@
-module Statement where
+module AST.Statement where
 
-import Expression
-import Type
-import VarDecl
+import AST.Expression
+import AST.Type
+import AST.VarDecl
 
 data Statement
+    -- todo is assign expression not statement?
     = Assign Expression Expression
     | ExprStmt Expression
-
     | Function Type String [VarDecl] [Statement]
 
     | Return (Maybe Expression)

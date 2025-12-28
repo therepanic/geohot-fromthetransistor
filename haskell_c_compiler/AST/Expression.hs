@@ -13,7 +13,7 @@ data Expression
 
     | Call Expression [Expression]
 
-    | UnaryOp Expression
+    | UnaryOp UnaryOp Expression
     | Binary Operator Expression Expression
 
     | Literal Lit

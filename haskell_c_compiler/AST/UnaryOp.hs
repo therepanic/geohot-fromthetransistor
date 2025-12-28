@@ -1,5 +1,5 @@
-module UnaryOp where
+module AST.UnaryOp where
 
 data UnaryOp
   = Neg
-  | Not
+  | Pos

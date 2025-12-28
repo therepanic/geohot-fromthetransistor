@@ -1,3 +1,3 @@
 module AST.Lit where
 
-data Lit = String
+data Lit = LNum String

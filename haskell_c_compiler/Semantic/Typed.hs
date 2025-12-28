@@ -1,4 +1,4 @@
-module Typed where
+module Semantic.Typed where
 
 import AST.Type
 import AST.UnaryOp
@@ -45,4 +45,3 @@ data TStatement
     | TIf TExpression [TStatement] [TStatement]
     | TWhile TExpression [TStatement]
     | TVarDecl String Type (Maybe TExpression)
-

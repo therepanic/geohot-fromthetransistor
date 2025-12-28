@@ -1,6 +1,6 @@
-module VarDecl where
+module AST.VarDecl where
 
-import Type
-import Expression
+import AST.Type
+import AST.Expression
 
 data VarDecl = VarDecl String Type (Maybe Expression)
