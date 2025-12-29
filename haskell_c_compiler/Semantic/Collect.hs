@@ -15,8 +15,7 @@ collectFunctions s =
         go :: GlobalEnv -> Statement -> GlobalEnv
         getVarDeclType :: VarDecl -> Type
         getVarDeclType v = case v of
-            VarDecl name typ Nothing -> typ
-            VarDecl name typ _ -> error ("Incorrect variable " ++ name ++ " type")
+            VarDecl _ typ _ -> typ
         go env (Function typ name args body) =
             let
                 argsTypes = map getVarDeclType args
