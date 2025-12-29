@@ -10,7 +10,15 @@ lex p = go p
     where
         go :: Pos -> String -> [Token]
         go p [] = [TokEOF p]
-        go p (c:cs)
+        go p s@(c:c1:cs)
+            | c == '<' && c1 == '=' = TokLte p : go p{ col = col p + 2 } cs
+            | c == '>' && c1 == '=' = TokGte p : go p{ col = col p + 2 } cs
+            | c == '=' && c1 == '=' = TokEqEq p : go p{ col = col p + 2 } cs
+            | c == '!' && c1 == '=' = TokNeq p : go p{ col = col p + 2 } cs
+            | otherwise = go1 p s
+        go1 :: Pos -> String -> [Token]
+        go1 p [] = [TokEOF p]
+        go1 p (c:cs)
             | c == '\n' = go (Pos { line = line p + 1, col = 1} ) cs
             | isSpace c = go (p { col = col p + 1 }) cs
             | isAlpha c = lexIdent p (c:cs)
@@ -24,6 +32,8 @@ lex p = go p
             | c == '=' = TokAssign p : go p{ col = col p + 1 } cs
             | c == ';' = TokSemicolon p : go p{col = col p + 1} cs
             | c == ',' = TokSemicolon p : go p{col = col p + 1} cs
+            | c == '<' = TokLt p : go p{ col = col p + 1 } cs
+            | c == '>' = TokGt p : go p{ col = col p + 1 } cs
             | otherwise = error ("Unexpected character '" ++ [c] ++ "' at " ++ show p)
 
 lexDig :: Pos -> String -> [Token]

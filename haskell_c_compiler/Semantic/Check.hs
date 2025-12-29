@@ -4,6 +4,7 @@ import qualified Data.Map.Strict as Map
 
 import AST.Expression
 import AST.Type
+import AST.Operator
 import AST.Statement
 import AST.VarDecl
 import AST.Type
@@ -56,7 +57,17 @@ checkExpr ge le (Binary op l r) =
             (PrimitiveType Int , PrimitiveType Int) -> PrimitiveType Int
             _ -> error "Binary op expects numeric operands"
     in
-        TExpression {texprType=mtype, texprNode = TBinary op tl tr}
+        case op of
+            Plus -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
+            Minus -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
+            Mul -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
+            Div -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
+            Gt -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Lt -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Gte -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Lte -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Eq -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Neq -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
 checkExpr ge le (AddressOf expr) =
     let te = checkExpr ge le expr
     in
@@ -74,3 +85,5 @@ checkExpr ge le (Cast typ expr) =
         texpr = checkExpr ge le expr
     in
         TExpression {texprType=typ, texprNode=TCast typ texpr}
+
+-- data Operator = Plus | Minus | Mul | Div | Gt | Lt | Gte | Lte | Eq | Neq

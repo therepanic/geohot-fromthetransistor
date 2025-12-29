@@ -189,7 +189,59 @@ parseExprStatement ts =
 
 -- EXPRESSIONS PARSING
 parseExpr :: [Token] -> (Expression, [Token])
-parseExpr = parseAdditive
+parseExpr = parseEquality
+
+-- Expression Equality parsing
+parseEquality :: [Token] -> (Expression, [Token])
+parseEquality ts =
+    let
+        (left, rest) = parseRelational ts
+    in
+        parseEquality' left rest
+
+parseEquality' :: Expression -> [Token] -> (Expression, [Token])
+parseEquality' left (TokEqEq _ : ts) =
+    let
+        (right, rest) = parseRelational ts
+    in
+        parseEquality' (Binary Eq left right) rest
+parseEquality' left (TokNeq _ : ts) =
+    let
+        (right, rest) = parseRelational ts
+    in
+        parseEquality' (Binary Neq left right) rest
+parseEquality' left ts = (left, ts)
+
+-- Expression Relational parsing
+parseRelational :: [Token] -> (Expression, [Token])
+parseRelational ts =
+    let
+        (left, rest) = parseAdditive ts
+    in
+        parseRelational' left rest
+
+parseRelational' :: Expression -> [Token] -> (Expression, [Token])
+parseRelational' left (TokLt _  : ts)  =
+    let
+        (right, rest) = parseAdditive ts
+    in
+        parseRelational' (Binary Lt left right) rest
+parseRelational' left (TokLte _ : ts)  =
+    let
+        (right, rest) = parseAdditive ts
+    in
+        parseRelational' (Binary Lte left right) rest
+parseRelational' left (TokGt _  : ts)  =
+    let
+        (right, rest) = parseAdditive ts
+    in
+        parseRelational' (Binary Gt left right) rest
+parseRelational' left (TokGte _ : ts)  =
+    let
+        (right, rest) = parseAdditive ts
+    in
+        parseRelational' (Binary Gte left right) rest
+parseRelational' left ts = (left, ts)
 
 -- Expression Additive parsing
 parseAdditive :: [Token] -> (Expression, [Token])
