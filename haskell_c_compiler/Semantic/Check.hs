@@ -86,4 +86,35 @@ checkExpr ge le (Cast typ expr) =
     in
         TExpression {texprType=typ, texprNode=TCast typ texpr}
 
--- data Operator = Plus | Minus | Mul | Div | Gt | Lt | Gte | Lte | Eq | Neq
+checkExpr ge le (Call name args) =
+    let
+        namestr = case name of
+            Var v -> v
+            _ -> error "Call expects function name"
+        (functype, argstypes) = case Map.lookup namestr ge of
+            Just (f, a) -> (f, a)
+            Nothing -> error ("Function with name " ++ namestr ++ " not exist")
+        check :: [Expression] -> [Type] -> [TExpression]
+        check [] [] = []
+        check e [] = error ("Invalid args in function " ++ namestr)
+        check [] t = error ("Invalid args in function " ++ namestr)
+        check (e:es) (t:ts) =
+            let
+                texpr = checkExpr ge le e
+                typ = texprType texpr
+            in
+                case (typ, t) of
+                    (PrimitiveType Int, PrimitiveType Long) ->
+                        let
+                            casted = 
+                                TExpression
+                                    {texprType = PrimitiveType Long
+                                    , texprNode = TCast (PrimitiveType Long) texpr
+                                    }
+                        in
+                            casted : check es ts
+                    _ -> if texprType texpr /= t
+                        then error ("Invalid arg type in function " ++ namestr)
+                        else texpr : check es ts
+    in
+        TExpression {texprType = functype, texprNode = TCall namestr (check args argstypes)}
