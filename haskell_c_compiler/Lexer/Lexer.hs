@@ -31,7 +31,7 @@ lex p = go p
             | c == ')' = TokRParen p : go p{ col = col p + 1 } cs
             | c == '=' = TokAssign p : go p{ col = col p + 1 } cs
             | c == ';' = TokSemicolon p : go p{col = col p + 1} cs
-            | c == ',' = TokSemicolon p : go p{col = col p + 1} cs
+            | c == ',' = TokComma p : go p{col = col p + 1} cs
             | c == '<' = TokLt p : go p{ col = col p + 1 } cs
             | c == '>' = TokGt p : go p{ col = col p + 1 } cs
             | otherwise = error ("Unexpected character '" ++ [c] ++ "' at " ++ show p)
