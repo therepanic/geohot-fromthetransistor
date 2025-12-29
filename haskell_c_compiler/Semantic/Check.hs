@@ -3,7 +3,6 @@ module Check where
 import qualified Data.Map.Strict as Map
 
 import AST.Expression
-import AST.Type
 import AST.Operator
 import AST.Statement
 import AST.VarDecl
@@ -23,11 +22,37 @@ import Semantic.Scope
 --         case init of
 
 --         (m:le, TVarDecl name typ init)
+
+-- =============================
+-- Helpers
+-- =============================
 isLValue :: Expression -> Bool
 isLValue (Var _) = True
 isLValue (Deref _) = True
 isLValue (Cast _ e) = isLValue e
 isLValue _ = False
+
+isNumeric :: Type -> Bool
+isNumeric (PrimitiveType Int) = True
+isNumeric (PrimitiveType Long) = True
+isNumeric _ = False
+
+isPointer :: Type -> Bool
+isPointer (PointerType _) = True
+isPointer _ = False
+
+numType :: Type -> Type -> Type
+numType t1 t2 =
+    case (t1, t2) of
+        (PrimitiveType Long, PrimitiveType Long) -> PrimitiveType Long
+        (PrimitiveType Int , PrimitiveType Long) -> PrimitiveType Long
+        (PrimitiveType Long, PrimitiveType Int ) -> PrimitiveType Long
+        (PrimitiveType Int , PrimitiveType Int ) -> PrimitiveType Int
+        _ -> error "Arithmetic op expects numeric operands"
+
+-- =============================
+-- Expressions checking
+-- =============================
 
 checkExpr :: GlobalEnv -> LocalEnv -> Expression -> TExpression
 checkExpr _ le (Var name) =
@@ -50,24 +75,32 @@ checkExpr ge le (Binary op l r) =
     let
         tl = checkExpr ge le l
         tr = checkExpr ge le r
-        mtype = case (texprType tl, texprType tr) of
-            (PrimitiveType Long, PrimitiveType Long) -> PrimitiveType Long
-            (PrimitiveType Int, PrimitiveType Long) -> PrimitiveType Long
-            (PrimitiveType Long, PrimitiveType Int) -> PrimitiveType Long
-            (PrimitiveType Int , PrimitiveType Int) -> PrimitiveType Int
-            _ -> error "Binary op expects numeric operands"
+        t1 = texprType tl
+        t2 = texprType tr
     in
         case op of
-            Plus -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
-            Minus -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
-            Mul -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
-            Div -> TExpression {texprType=mtype, texprNode = TBinary op tl tr}
-            Gt -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
-            Lt -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
-            Gte -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
-            Lte -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
-            Eq -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
-            Neq -> TExpression {texprType=PrimitiveType Int, texprNode = TBinary op tl tr}
+            Plus -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
+            Minus -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
+            Mul -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
+            Div -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
+            Gt -> if isNumeric t1 && isNumeric t2
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Relational op expects numeric operands"
+            Lt -> if isNumeric t1 && isNumeric t2
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Relational op expects numeric operands"
+            Gte -> if isNumeric t1 && isNumeric t2
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Relational op expects numeric operands"
+            Lte -> if isNumeric t1 && isNumeric t2
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Relational op expects numeric operands"
+            Eq -> if (isNumeric t1 && isNumeric t2) || (isPointer t1 && isPointer t2)
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Eq expects both numeric or both pointers"
+            Neq -> if (isNumeric t1 && isNumeric t2) || (isPointer t1 && isPointer t2)
+                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                else error "Eq expects both numeric or both pointers"
 checkExpr ge le (AddressOf expr) =
     let te = checkExpr ge le expr
     in
