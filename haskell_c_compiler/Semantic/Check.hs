@@ -13,42 +13,25 @@ import Semantic.Scope
 
 -- checkProgram :: [Statement] -> TProgram
 -- checkFunction :: GlobalEnv -> Statement -> TFunction
--- checkStatement :: GlobalEnv -> Type -> LocalEnv -> Statement -> (LocalEnv, TStatement)
--- checkStatement ge _ (l:le) (VarDeclStmt (VarDecl name typ init)) =
---     if Map.member name l then error ("Variable with name " ++ name + " already exists")
---     else let
---         m = Map.insert name typ l
---     in
---         case init of
-
---         (m:le, TVarDecl name typ init)
 
 -- =============================
--- Helpers
+-- Statements checking
 -- =============================
-isLValue :: Expression -> Bool
-isLValue (Var _) = True
-isLValue (Deref _) = True
-isLValue (Cast _ e) = isLValue e
-isLValue _ = False
 
-isNumeric :: Type -> Bool
-isNumeric (PrimitiveType Int) = True
-isNumeric (PrimitiveType Long) = True
-isNumeric _ = False
-
-isPointer :: Type -> Bool
-isPointer (PointerType _) = True
-isPointer _ = False
-
-numType :: Type -> Type -> Type
-numType t1 t2 =
-    case (t1, t2) of
-        (PrimitiveType Long, PrimitiveType Long) -> PrimitiveType Long
-        (PrimitiveType Int , PrimitiveType Long) -> PrimitiveType Long
-        (PrimitiveType Long, PrimitiveType Int ) -> PrimitiveType Long
-        (PrimitiveType Int , PrimitiveType Int ) -> PrimitiveType Int
-        _ -> error "Arithmetic op expects numeric operands"
+checkStatement :: GlobalEnv -> Type -> LocalEnv -> Statement -> (LocalEnv, TStatement)
+checkStatement ge _ (l:le) (VarDeclStmt (VarDecl name typ init)) =
+    if Map.member name l then error ("Variable with name " ++ name ++ " already exists")
+    else let
+        m = Map.insert name typ l
+    in
+        case init of
+            Nothing -> (m:le, TVarDecl name typ Nothing)
+            Just expr ->
+                let
+                    te = checkExpr ge (l:le) expr
+                    te'  = coerceAssign typ te
+                in
+                    (m:le, TVarDecl name typ (Just te'))
 
 -- =============================
 -- Expressions checking
@@ -151,3 +134,38 @@ checkExpr ge le (Call name args) =
                         else texpr : check es ts
     in
         TExpression {texprType = functype, texprNode = TCall namestr (check args argstypes)}
+
+-- =============================
+-- Helpers
+-- =============================
+isLValue :: Expression -> Bool
+isLValue (Var _) = True
+isLValue (Deref _) = True
+isLValue (Cast _ e) = isLValue e
+isLValue _ = False
+
+isNumeric :: Type -> Bool
+isNumeric (PrimitiveType Int) = True
+isNumeric (PrimitiveType Long) = True
+isNumeric _ = False
+
+isPointer :: Type -> Bool
+isPointer (PointerType _) = True
+isPointer _ = False
+
+numType :: Type -> Type -> Type
+numType t1 t2 =
+    case (t1, t2) of
+        (PrimitiveType Long, PrimitiveType Long) -> PrimitiveType Long
+        (PrimitiveType Int , PrimitiveType Long) -> PrimitiveType Long
+        (PrimitiveType Long, PrimitiveType Int ) -> PrimitiveType Long
+        (PrimitiveType Int , PrimitiveType Int ) -> PrimitiveType Int
+        _ -> error "Arithmetic op expects numeric operands"
+
+coerceAssign :: Type -> TExpression -> TExpression
+coerceAssign lhs te =
+    case (lhs, texprType te) of
+        (t1, t2) | t1 == t2 -> te
+        (PrimitiveType Long, PrimitiveType Int) -> TExpression { texprType = lhs, texprNode = TCast lhs te }
+        (PrimitiveType Int, PrimitiveType Long) -> error "narrowing conversion long -> int"
+        _ -> error "type mismatch in initializer"
