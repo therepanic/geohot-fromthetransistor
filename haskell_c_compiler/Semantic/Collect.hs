@@ -13,14 +13,13 @@ collectFunctions :: [Statement] -> GlobalEnv
 collectFunctions s =
     let
         go :: GlobalEnv -> Statement -> GlobalEnv
-        getVarDeclType :: VarDecl -> Type
-        getVarDeclType v = case v of
-            VarDecl _ typ _ -> typ
         go env (Function typ name args body) =
-            let
-                argsTypes = map getVarDeclType args
-            in
-                if Map.member name env then error ("Function with name " ++ name ++ " already exist") else Map.insert name (typ, argsTypes) env
+            if Map.member name env
+                then error ("Function with name " ++ name ++ " already exist")
+                else Map.insert name (typ, gettypes args) env
+            where
+                gettypes :: [(String, Type)] -> [Type]
+                gettypes ((n, t):a) = [y | (x, y) <- a]
         go env _ = env
     in
         foldl' go Map.empty s

@@ -70,9 +70,10 @@ parseFunction tokens =
             TokIdent name _ : TokLParen _ : rest2 ->
                 let
                     (v, rest3) = parseParamList rest2
+                    params = [(pname, pty) | VarDecl pname pty _ <- v]
                     (v1, rest4) = parseBlock rest3
                 in
-                    (Function ty name v v1, rest4)
+                    (Function ty name params v1, rest4)
             _ -> error "Expected function name and '(' after type"
 
 -- Statement assign parsing

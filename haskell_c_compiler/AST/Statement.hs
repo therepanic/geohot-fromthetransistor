@@ -8,7 +8,7 @@ data Statement
     -- todo is assign expression not statement?
     = Assign Expression Expression
     | ExprStmt Expression
-    | Function Type String [VarDecl] [Statement]
+    | Function Type String [(String, Type)] [Statement]
 
     | Return (Maybe Expression)
 

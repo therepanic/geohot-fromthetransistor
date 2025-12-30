@@ -20,5 +20,11 @@ data Token
     | TokRBrace Pos
     | TokComma Pos
     | TokSemicolon Pos
+    | TokLt Pos
+    | TokGt Pos
+    | TokLte Pos
+    | TokGte Pos
+    | TokEqEq Pos
+    | TokNeq Pos
     | TokEOF Pos
     deriving (Show, Eq)

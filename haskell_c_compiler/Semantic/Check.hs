@@ -13,7 +13,25 @@ import Semantic.Scope
 import Data.List (foldl')
 
 -- checkProgram :: [Statement] -> TProgram
--- checkFunction :: GlobalEnv -> Statement -> TFunction
+
+-- =============================
+-- Functions checking
+-- =============================
+
+checkFunction :: GlobalEnv -> Statement -> TFunction
+checkFunction ge (Function typ name args body) =
+    let
+        tbody = checkBlock ge typ [collect args] body
+    in
+        TFunction {tfReturnType=typ, tfName=name, tfParams=args, tfBody=tbody}
+    where
+        collect :: [(String, Type)] -> Map.Map String Type
+        collect [] = Map.empty
+        collect ((x, y):a) =
+            let
+                m = Map.insert x y (collect a)
+            in
+                m
 
 -- =============================
 -- Statements checking
