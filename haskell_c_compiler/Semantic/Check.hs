@@ -10,9 +10,17 @@ import AST.Type
 import AST.Lit
 import Semantic.Typed
 import Semantic.Scope
+import Semantic.Collect
 import Data.List (foldl')
 
--- checkProgram :: [Statement] -> TProgram
+-- =============================
+-- Program checking
+-- =============================
+
+checkProgram :: [Statement] -> TProgram
+checkProgram stmts = TProgram (map (checkFunction ge) stmts)
+    where
+        ge = collectFunctions stmts
 
 -- =============================
 -- Functions checking
@@ -32,6 +40,7 @@ checkFunction ge (Function typ name args body) =
                 m = Map.insert x y (collect a)
             in
                 m
+checkFunction ge _ = error "Not function"
 
 -- =============================
 -- Statements checking
