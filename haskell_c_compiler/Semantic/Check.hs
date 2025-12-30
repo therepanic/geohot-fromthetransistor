@@ -10,6 +10,7 @@ import AST.Type
 import AST.Lit
 import Semantic.Typed
 import Semantic.Scope
+import Data.List (foldl')
 
 -- checkProgram :: [Statement] -> TProgram
 -- checkFunction :: GlobalEnv -> Statement -> TFunction
@@ -32,6 +33,62 @@ checkStatement ge _ (l:le) (VarDeclStmt (VarDecl name typ init)) =
                     te'  = coerceAssign typ te
                 in
                     (m:le, TVarDecl name typ (Just te'))
+
+checkStatement ge _ (l:le) (Assign lhs rhs) =
+    let
+        tl = checkExpr ge (l:le) lhs
+    in
+        case texprNode tl of
+            TDeref _ ->
+                let
+                    tr  = checkExpr ge (l:le) rhs
+                    tr' = coerceAssign (texprType tl) tr
+                in
+                    (l:le, TAssign tl tr')
+            TVar _ ->
+                let
+                    tr  = checkExpr ge (l:le) rhs
+                    tr' = coerceAssign (texprType tl) tr
+                in
+                    (l:le, TAssign tl tr')
+            _ -> error "LHS of assignment is not an lvalue"
+
+checkStatement ge _ le (ExprStmt e) = (le, TExprStmt (checkExpr ge le e))
+checkStatement ge t le (If cond th elze) =
+    let
+        condexpr = checkExpr ge le cond
+        thenStmts = checkBlock ge t (Map.empty : le) th
+        elseStmts = checkBlock ge t (Map.empty : le) elze
+    in
+        (le, TIf condexpr thenStmts elseStmts)
+
+checkStatement ge t le (While cond body) =
+    let
+        condexpr = checkExpr ge le cond
+    in
+        (le, TWhile condexpr (checkBlock ge t (Map.empty : le) body))
+
+checkStatement ge t le (Return (Just v)) =
+    let
+        te = checkExpr ge le v
+        te' = coerceAssign t te
+    in
+        (le, TReturn (Just te'))
+
+checkStatement ge t le (Return Nothing) =
+    case t of
+        PrimitiveType Void -> (le, TReturn Nothing)
+        _ -> error "Return without value in non-void function"
+
+checkBlock :: GlobalEnv -> Type -> LocalEnv -> [Statement] -> [TStatement]
+checkBlock ge typ le stmts =
+    reverse $ snd $ foldl' step (le, []) stmts
+    where
+        step (env, acc) s =
+            let
+                (env', ts) = checkStatement ge typ env s
+            in
+                (env', ts : acc)
 
 -- =============================
 -- Expressions checking
