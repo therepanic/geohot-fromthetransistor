@@ -10,7 +10,10 @@ import AST.Operator
 import AST.VarDecl
 import Lexer.Token
 
--- STATEMENTS PARSING
+-- =============================
+-- Statements parsing
+-- =============================
+
 parseStatement :: [Token] -> (Statement, [Token])
 parseStatement toks@(TokIdent "if" t : ts) = parseIf toks
 parseStatement toks@(TokIdent "while" t : ts) = parseWhile toks
@@ -72,6 +75,7 @@ parseFunction tokens =
                     (Function ty name v v1, rest4)
             _ -> error "Expected function name and '(' after type"
 
+-- Statement assign parsing
 parseAssign :: [Token] -> (Statement, [Token])
 parseAssign ts =
     let
@@ -187,7 +191,9 @@ parseExprStatement ts =
                 (ExprStmt expr, rest')
             _ -> error "Expected ';'"
 
--- EXPRESSIONS PARSING
+-- =============================
+-- Expressions parsing
+-- =============================
 parseExpr :: [Token] -> (Expression, [Token])
 parseExpr = parseEquality
 
@@ -366,15 +372,17 @@ parsePrimary (TokLParen _ : ts) =
 parsePrimary (TokIdent val _ : ts) = (Var val, ts)
 parsePrimary (TokNum val _ : ts) = (Literal (LNum val), ts)
 
--- HELPERS
+-- =============================
+-- Helpers
+-- =============================
 
 -- Check if it type name
 isTypeName :: Token -> Bool
 isTypeName (TokIdent "int" _) = True
 isTypeName (TokIdent "long" _) = True
 isTypeName (TokIdent "void" _) = True
-
 isTypeName _ = False
+
 -- Parse type
 parseType :: [Token] -> (Type, [Token])
 parseType (TokIdent "int" _ : ts) =

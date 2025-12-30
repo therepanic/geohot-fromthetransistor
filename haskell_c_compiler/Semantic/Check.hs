@@ -20,6 +20,8 @@ import Data.List (foldl')
 -- =============================
 
 checkStatement :: GlobalEnv -> Type -> LocalEnv -> Statement -> (LocalEnv, TStatement)
+
+-- Statement var declaration checking
 checkStatement ge _ (l:le) (VarDeclStmt (VarDecl name typ init)) =
     if Map.member name l then error ("Variable with name " ++ name ++ " already exists")
     else let
@@ -34,6 +36,7 @@ checkStatement ge _ (l:le) (VarDeclStmt (VarDecl name typ init)) =
                 in
                     (m:le, TVarDecl name typ (Just te'))
 
+-- Statement assign checking
 checkStatement ge _ (l:le) (Assign lhs rhs) =
     let
         tl = checkExpr ge (l:le) lhs
@@ -53,7 +56,10 @@ checkStatement ge _ (l:le) (Assign lhs rhs) =
                     (l:le, TAssign tl tr')
             _ -> error "LHS of assignment is not an lvalue"
 
+-- Statement expression checking
 checkStatement ge _ le (ExprStmt e) = (le, TExprStmt (checkExpr ge le e))
+
+-- Statement if checking
 checkStatement ge t le (If cond th elze) =
     let
         condexpr = checkExpr ge le cond
@@ -62,12 +68,14 @@ checkStatement ge t le (If cond th elze) =
     in
         (le, TIf condexpr thenStmts elseStmts)
 
+-- Statement while checking
 checkStatement ge t le (While cond body) =
     let
         condexpr = checkExpr ge le cond
     in
         (le, TWhile condexpr (checkBlock ge t (Map.empty : le) body))
 
+-- Statement return checking
 checkStatement ge t le (Return (Just v)) =
     let
         te = checkExpr ge le v
@@ -80,21 +88,13 @@ checkStatement ge t le (Return Nothing) =
         PrimitiveType Void -> (le, TReturn Nothing)
         _ -> error "Return without value in non-void function"
 
-checkBlock :: GlobalEnv -> Type -> LocalEnv -> [Statement] -> [TStatement]
-checkBlock ge typ le stmts =
-    reverse $ snd $ foldl' step (le, []) stmts
-    where
-        step (env, acc) s =
-            let
-                (env', ts) = checkStatement ge typ env s
-            in
-                (env', ts : acc)
-
 -- =============================
 -- Expressions checking
 -- =============================
 
 checkExpr :: GlobalEnv -> LocalEnv -> Expression -> TExpression
+
+-- Expression var checking
 checkExpr _ le (Var name) =
     let
         containsVar :: LocalEnv -> String -> TExpression
@@ -105,12 +105,18 @@ checkExpr _ le (Var name) =
                 Nothing -> containsVar rest name
     in
         containsVar le name
+
+-- Expression literal checking
 checkExpr _ le (Literal lit) = TExpression {texprType=PrimitiveType Int, texprNode=TLiteral lit}
+
+-- Expression unary op checking
 checkExpr ge le (UnaryOp s expr) =
     let
         texpr = checkExpr ge le expr
     in
         TExpression {texprType=texprType texpr, texprNode=TUnaryOp s texpr}
+
+-- Expression binary checking
 checkExpr ge le (Binary op l r) =
     let
         tl = checkExpr ge le l
@@ -141,24 +147,31 @@ checkExpr ge le (Binary op l r) =
             Neq -> if (isNumeric t1 && isNumeric t2) || (isPointer t1 && isPointer t2)
                 then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
                 else error "Eq expects both numeric or both pointers"
+
+-- Expression addres of checking
 checkExpr ge le (AddressOf expr) =
     let te = checkExpr ge le expr
     in
         if isLValue expr
             then TExpression {texprType = PointerType (texprType te), texprNode = TAddressOf te}
             else error "Address-of expects an lvalue"
+
+-- Expression deref checking
 checkExpr ge le (Deref expr) =
     let te = checkExpr ge le expr
     in
         case texprType te of
             PointerType t -> TExpression {texprType = t, texprNode = TDeref te}
             _ -> error "Cannot dereference non-pointer"
+
+-- Expression cast checking
 checkExpr ge le (Cast typ expr) =
     let
         texpr = checkExpr ge le expr
     in
         TExpression {texprType=typ, texprNode=TCast typ texpr}
 
+-- Expression call checking
 checkExpr ge le (Call name args) =
     let
         namestr = case name of
@@ -226,3 +239,13 @@ coerceAssign lhs te =
         (PrimitiveType Long, PrimitiveType Int) -> TExpression { texprType = lhs, texprNode = TCast lhs te }
         (PrimitiveType Int, PrimitiveType Long) -> error "narrowing conversion long -> int"
         _ -> error "type mismatch in initializer"
+
+checkBlock :: GlobalEnv -> Type -> LocalEnv -> [Statement] -> [TStatement]
+checkBlock ge typ le stmts =
+    reverse $ snd $ foldl' step (le, []) stmts
+    where
+        step (env, acc) s =
+            let
+                (env', ts) = checkStatement ge typ env s
+            in
+                (env', ts : acc)
