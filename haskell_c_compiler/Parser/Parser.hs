@@ -2,13 +2,27 @@ module Parser.Parser where
 
 import qualified AST.UnaryOp as U
 import qualified AST.Statement as F
+
 import AST.Expression
 import AST.Lit
 import AST.Type
 import AST.Statement
 import AST.Operator
 import AST.VarDecl
+import AST.Program
 import Lexer.Token
+
+-- =============================
+-- Program parsing
+-- =============================
+
+parseProgram :: [Token] -> Program
+parseProgram (TokEOF _ : _) = []
+parseProgram toks =
+    let
+        (stmt, rest) = parseStatement toks
+    in
+        stmt : parseProgram rest
 
 -- =============================
 -- Statements parsing
