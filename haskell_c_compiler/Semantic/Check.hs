@@ -115,6 +115,16 @@ checkStatement ge t le (Return Nothing) =
         PrimitiveType Void -> (le, TReturn Nothing)
         _ -> error "Return without value in non-void function"
 
+checkBlock :: GlobalEnv -> Type -> LocalEnv -> [Statement] -> [TStatement]
+checkBlock ge typ le stmts =
+    reverse $ snd $ foldl' step (le, []) stmts
+    where
+        step (env, acc) s =
+            let
+                (env', ts) = checkStatement ge typ env s
+            in
+                (env', ts : acc)
+
 -- =============================
 -- Expressions checking
 -- =============================
@@ -267,12 +277,3 @@ coerceAssign lhs te =
         (PrimitiveType Int, PrimitiveType Long) -> error "narrowing conversion long -> int"
         _ -> error "type mismatch in initializer"
 
-checkBlock :: GlobalEnv -> Type -> LocalEnv -> [Statement] -> [TStatement]
-checkBlock ge typ le stmts =
-    reverse $ snd $ foldl' step (le, []) stmts
-    where
-        step (env, acc) s =
-            let
-                (env', ts) = checkStatement ge typ env s
-            in
-                (env', ts : acc)

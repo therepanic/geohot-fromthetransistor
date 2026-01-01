@@ -1,5 +1,6 @@
 module IR.Lower where
 
+import Data.List (foldl')
 import AST.Type
 import AST.Lit
 import AST.Operator
@@ -7,6 +8,105 @@ import AST.UnaryOp
 import IR.Builder
 import IR.Types
 import Semantic.Types
+
+-- =============================
+-- Statements lowering
+-- =============================
+lowerStatement :: Builder -> TStatement -> Builder
+lowerStatement b tstmt =
+    case tstmt of
+        TExprStmt e -> lowerExprStmt b e
+        TReturn e -> lowerReturn b e
+        TVarDecl n t e -> lowerVarDecl b n t e
+        TAssign l r -> lowerAssign b l r
+        TWhile c body -> lowerWhile b c body
+        TIf c t e -> lowerIf b c t e
+
+-- Statement assign lowering
+lowerAssign :: Builder -> TExpression -> TExpression -> Builder
+lowerAssign b lhs rhs =
+    let
+        (newb1, lhsaddr) = lowerAddr b lhs
+        (newb2, rhsv) = lowerExpression newb1 rhs
+    in
+        emit (IStore lhsaddr (texprType lhs) rhsv) newb2
+
+-- Statement while lowering
+lowerWhile :: Builder -> TExpression -> [TStatement] -> Builder
+lowerWhile b cond body =
+    let
+        condtype = texprType cond
+        condnode = texprNode cond
+        (newb1, beginLabel) = freshLabel b
+        (newb2, midLabel) = freshLabel newb1
+        (newb3, stopLabel) = freshLabel newb2
+    in
+        case condnode of
+            TBinary op lhs rhs ->
+                let
+                    newb4 = emit (ILabel beginLabel) newb3
+                    (newb5, lhsv) = lowerExpression newb4 lhs
+                    (newb6, rhsv) = lowerExpression newb5 rhs
+                    newb7 = emit (ICondJump op condtype lhsv rhsv midLabel stopLabel) newb6
+                    newb8 = emit (ILabel midLabel) newb7
+                    newb9 = lowerBlock newb8 body
+                    newb10 = emit (IJump beginLabel) newb9
+                    newb11 = emit (ILabel stopLabel) newb10
+                in
+                    newb11
+
+-- Statement if lowering
+lowerIf :: Builder -> TExpression -> [TStatement] -> [TStatement] -> Builder
+lowerIf b cond thn elze =
+    let
+        condtype = texprType cond
+        condnode = texprNode cond
+        (newb1, thenLabel) = freshLabel b
+        (newb2, elseLabel) = freshLabel newb1
+        (newb3, endLabel) = freshLabel newb2
+    in
+        case condnode of
+            TBinary op lhs rhs ->
+                let
+                    (newb4, lhsv) = lowerExpression newb3 lhs
+                    (newb5, rhsv) = lowerExpression newb4 rhs
+                    newb6 = emit (ICondJump op condtype lhsv rhsv thenLabel elseLabel) newb5
+                    newb7 = emit (ILabel thenLabel) newb6
+                    newb8 = lowerBlock newb7 thn
+                    newb9 = emit (IJump endLabel) newb8
+                    newb10 = emit (ILabel elseLabel) newb9
+                    newb11 = lowerBlock newb10 elze
+                    newb12 = emit (ILabel endLabel) newb11
+                in
+                    newb12
+            _ -> error "Unhandled condition expression "
+
+-- Statement var declaration lowering
+lowerVarDecl :: Builder -> String -> Type -> Maybe TExpression -> Builder
+lowerVarDecl b name t Nothing = b
+lowerVarDecl b name t (Just texpr) =
+    let
+        (newb1, v) = lowerExpression b texpr
+    in
+        emit (IStore (AVar name) t v) newb1
+
+-- Statement return lowering
+lowerReturn :: Builder -> Maybe TExpression -> Builder
+lowerReturn b Nothing = emit (IReturn Nothing) b
+lowerReturn b (Just texpr) =
+    let
+        t = texprType texpr
+        (newb1, v) = lowerExpression b texpr
+    in
+        emit (IReturn (Just (t, v))) newb1
+
+-- Statement exprstmt lowering
+lowerExprStmt :: Builder -> TExpression -> Builder
+lowerExprStmt b e = fst (lowerExpression b e)
+
+-- Block lowering
+lowerBlock :: Builder -> [TStatement] -> Builder
+lowerBlock = foldl' lowerStatement
 
 -- =============================
 -- Expressions lowering
@@ -95,7 +195,7 @@ lowerAddressOf b t texpr =
                 (newb1, pv) = lowerExpression b p
                 (newb2, tp) = ensureTemp newb1 pv
             in
-                (newb2, VTemp tp) 
+                (newb2, VTemp tp)
         TCast _ e -> lowerAddressOf b t e
         _ -> error "Address-of expects an lvalue"
 
@@ -136,3 +236,19 @@ ensureTemp b v =
                 (newb1, t) = freshTemp b
             in
                 (emit (IMov t v) newb1, t)
+
+lowerAddr :: Builder -> TExpression -> (Builder, Addr)
+lowerAddr b te =
+    case texprNode te of
+        TVar name ->
+            (b, AVar name)
+        TDeref p ->
+            let
+                (newb1, pv) = lowerExpression b p
+                (newb2, tp) = ensureTemp newb1 pv
+            in
+                (newb2, ATemp tp)
+        TCast _ e ->
+            lowerAddr b e
+        _ ->
+            error "Assignment expects lvalue on the left"
