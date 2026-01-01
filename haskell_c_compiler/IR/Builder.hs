@@ -1,4 +1,4 @@
-module Builder where
+module IR.Builder where
 
 import IR.Types
 

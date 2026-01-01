@@ -1,4 +1,4 @@
-module Semantic.Typed where
+module Semantic.Types where
 
 import AST.Type
 import AST.UnaryOp
@@ -10,10 +10,11 @@ newtype TProgram = TProgram [TFunction]
 data TFunction = TFunction
     {
         tfReturnType :: Type
-        , tfName       :: String
-        , tfParams     :: [(String, Type)]
-        , tfBody       :: [TStatement]
+        , tfName :: String
+        , tfParams :: [(String, Type)]
+        , tfBody :: [TStatement]
     }
+    deriving (Show, Eq)
 
 
 data TExpression = TExpression
@@ -21,6 +22,7 @@ data TExpression = TExpression
         texprType :: Type
         , texprNode :: TExpressionNode
     }
+    deriving (Show, Eq)
 
 data TExpressionNode
     = TAddressOf TExpression
@@ -35,6 +37,7 @@ data TExpressionNode
 
     | TLiteral Lit
     | TVar String
+    deriving (Show, Eq)
 
 data TStatement
     = TAssign TExpression TExpression
@@ -45,3 +48,4 @@ data TStatement
     | TIf TExpression [TStatement] [TStatement]
     | TWhile TExpression [TStatement]
     | TVarDecl String Type (Maybe TExpression)
+    deriving (Show, Eq)

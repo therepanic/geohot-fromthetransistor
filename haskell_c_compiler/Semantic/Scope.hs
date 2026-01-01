@@ -8,4 +8,3 @@ type FuncSig = (Type, [Type])
 
 type GlobalEnv = Map String FuncSig
 type LocalEnv = [Map String Type]
-
