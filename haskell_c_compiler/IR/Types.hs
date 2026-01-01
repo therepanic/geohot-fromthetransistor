@@ -1,7 +1,7 @@
-module IR where
+module IR.Types where
 
 newtype Temp  = Temp Int deriving (Show, Eq)
-newtype Label = Label String deriving (Show, Eq)
+newtype Label = Label Int deriving (Show, Eq)
 
 data Val = VTemp Temp | VConst Integer deriving (Show, Eq)
 
