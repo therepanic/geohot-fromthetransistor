@@ -117,7 +117,7 @@ lowerExpression b texpr =
         TVar name -> lowerVar b (texprType texpr) name
         TLiteral (LNum val) -> lowerLiteral b (texprType texpr) val
         TBinary op lhs rhs -> lowerBinary b (texprType texpr) op lhs rhs
-        TAddressOf e -> lowerAddressOf b (texprType texpr) e
+        TAddressOf e -> lowerAddressOf b e
         TDeref e -> lowerDeref b (texprType texpr) e
         TCast to e -> lowerCast b to e
         TUnaryOp u e -> lowerUnary b (texprType texpr) u e
@@ -182,22 +182,18 @@ lowerDeref b t texpr =
         (emit curinstr newb3, VTemp curtemp1)
 
 -- Expression address of lowering
-lowerAddressOf :: Builder -> Type -> TExpression -> (Builder, Val)
-lowerAddressOf b t texpr =
-    case texprNode texpr of
-        TVar name ->
-            let
-                (newb1, curtemp) = freshTemp b
-            in
-                (emit (IAddrOf curtemp name) newb1, VTemp curtemp)
-        TDeref p ->
-            let
-                (newb1, pv) = lowerExpression b p
-                (newb2, tp) = ensureTemp newb1 pv
-            in
-                (newb2, VTemp tp)
-        TCast _ e -> lowerAddressOf b t e
-        _ -> error "Address-of expects an lvalue"
+lowerAddressOf :: Builder -> TExpression -> (Builder, Val)
+lowerAddressOf b texpr =
+    let
+        (newb1, lhsaddr) = lowerAddr b texpr
+    in
+        case lhsaddr of
+            ATemp tp -> (newb1, VTemp tp)
+            AVar name ->
+                let
+                    (newb2, curtemp) = freshTemp newb1
+                in
+                    (emit (IAddrOf curtemp name) newb2, VTemp curtemp)
 
 -- Expression binary lowering
 lowerBinary :: Builder -> Type -> Operator -> TExpression -> TExpression -> (Builder, Val)
