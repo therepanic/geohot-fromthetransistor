@@ -22,6 +22,7 @@ data Token
     | TokSemicolon Pos
     | TokLt Pos
     | TokGt Pos
+    | TokNot Pos
     | TokLte Pos
     | TokGte Pos
     | TokEqEq Pos

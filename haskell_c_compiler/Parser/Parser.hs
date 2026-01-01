@@ -331,6 +331,11 @@ parseUnary (TokPlus _ : ts) =
         (e, tokens) = parseUnary ts
     in
         (UnaryOp U.Pos e, tokens)
+parseUnary (TokNot _ : ts) =
+    let
+        (e, tokens) = parseUnary ts
+    in
+        (UnaryOp U.Not e, tokens)
 parseUnary (TokStar _ : ts) =
     let
         (e, tokens) = parseUnary ts

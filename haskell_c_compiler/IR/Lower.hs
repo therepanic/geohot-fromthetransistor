@@ -35,51 +35,32 @@ lowerAssign b lhs rhs =
 lowerWhile :: Builder -> TExpression -> [TStatement] -> Builder
 lowerWhile b cond body =
     let
-        condtype = texprType cond
-        condnode = texprNode cond
         (newb1, beginLabel) = freshLabel b
         (newb2, midLabel) = freshLabel newb1
         (newb3, stopLabel) = freshLabel newb2
+        newb4 = emit (ILabel beginLabel) newb3
+        newb5 = lowerCondJump newb4 cond midLabel stopLabel
+        newb6 = emit (ILabel midLabel) newb5
+        newb7 = lowerBlock newb6 body
+        newb8 = emit (IJump beginLabel) newb7
     in
-        case condnode of
-            TBinary op lhs rhs ->
-                let
-                    newb4 = emit (ILabel beginLabel) newb3
-                    (newb5, lhsv) = lowerExpression newb4 lhs
-                    (newb6, rhsv) = lowerExpression newb5 rhs
-                    newb7 = emit (ICondJump op condtype lhsv rhsv midLabel stopLabel) newb6
-                    newb8 = emit (ILabel midLabel) newb7
-                    newb9 = lowerBlock newb8 body
-                    newb10 = emit (IJump beginLabel) newb9
-                    newb11 = emit (ILabel stopLabel) newb10
-                in
-                    newb11
+        emit (ILabel stopLabel) newb8
 
 -- Statement if lowering
 lowerIf :: Builder -> TExpression -> [TStatement] -> [TStatement] -> Builder
 lowerIf b cond thn elze =
     let
-        condtype = texprType cond
-        condnode = texprNode cond
         (newb1, thenLabel) = freshLabel b
         (newb2, elseLabel) = freshLabel newb1
         (newb3, endLabel) = freshLabel newb2
+        newb4 = lowerCondJump newb3 cond thenLabel elseLabel
+        newb5 = emit (ILabel thenLabel) newb4
+        newb6 = lowerBlock newb5 thn
+        newb7 = emit (IJump endLabel) newb6
+        newb8 = emit (ILabel elseLabel) newb7
+        newb9 = lowerBlock newb8 elze
     in
-        case condnode of
-            TBinary op lhs rhs ->
-                let
-                    (newb4, lhsv) = lowerExpression newb3 lhs
-                    (newb5, rhsv) = lowerExpression newb4 rhs
-                    newb6 = emit (ICondJump op condtype lhsv rhsv thenLabel elseLabel) newb5
-                    newb7 = emit (ILabel thenLabel) newb6
-                    newb8 = lowerBlock newb7 thn
-                    newb9 = emit (IJump endLabel) newb8
-                    newb10 = emit (ILabel elseLabel) newb9
-                    newb11 = lowerBlock newb10 elze
-                    newb12 = emit (ILabel endLabel) newb11
-                in
-                    newb12
-            _ -> error "Unhandled condition expression "
+        emit (ILabel endLabel) newb9
 
 -- Statement var declaration lowering
 lowerVarDecl :: Builder -> String -> Type -> Maybe TExpression -> Builder
@@ -248,3 +229,30 @@ lowerAddr b te =
             lowerAddr b e
         _ ->
             error "Assignment expects lvalue on the left"
+
+lowerCondJump :: Builder -> TExpression -> Label -> Label -> Builder
+lowerCondJump b cond lTrue lFalse =
+    case texprNode cond of
+        TUnaryOp Not e -> lowerCondJump b e lFalse lTrue
+        TBinary op lhs rhs | isRelOp op ->
+            let
+                (newb1, lhsv) = lowerExpression b lhs
+                (newb2, rhsv) = lowerExpression newb1 rhs
+            in
+                emit (ICondJump op (texprType cond) lhsv rhsv lTrue lFalse) newb2
+        _ ->
+            let
+                (newb1, v) = lowerExpression b cond
+            in
+                emit (ICondJump Neq (texprType cond) v (VConst 0) lTrue lFalse) newb1
+
+isRelOp :: Operator -> Bool
+isRelOp op =
+    case op of
+        Eq  -> True
+        Neq -> True
+        Lt  -> True
+        Lte  -> True
+        Gt  -> True
+        Gte  -> True
+        _   -> False
