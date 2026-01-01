@@ -8,8 +8,10 @@ import IR.Builder
 import IR.Types
 import Semantic.Types
 
+-- =============================
+-- Expressions lowering
+-- =============================
 lowerExpression :: Builder -> TExpression -> (Builder, Val)
-
 lowerExpression b texpr =
     case texprNode texpr of
         TVar name -> lowerVar b (texprType texpr) name
@@ -22,6 +24,7 @@ lowerExpression b texpr =
         TCall n es -> lowerCall b (texprType texpr) n es
         _ -> error ("lowerExpression: unhandled node " ++ show (texprNode texpr))
 
+-- Expression call lowering
 lowerCall :: Builder -> Type -> String -> [TExpression] -> (Builder, Val)
 lowerCall b t name exprs =
     let
@@ -43,6 +46,7 @@ lowerCall b t name exprs =
                 in
                     (emit (ICall (Just curtemp) name vals) newb2, VTemp curtemp)
 
+-- Expression unary lowering
 lowerUnary :: Builder -> Type -> UnaryOp -> TExpression -> (Builder, Val)
 lowerUnary b t u texpr =
     let
@@ -51,6 +55,7 @@ lowerUnary b t u texpr =
     in
         (emit (IUnaryOp curtemp t u v) newb2, VTemp curtemp)
 
+-- Expression cast lowering
 lowerCast :: Builder -> Type -> TExpression -> (Builder, Val)
 lowerCast b toType texpr =
     let
@@ -65,6 +70,7 @@ lowerCast b toType texpr =
                 in
                     (emit (ICast curtemp toType v) newb2, VTemp curtemp)
 
+-- Expression deref lowering
 lowerDeref :: Builder -> Type -> TExpression -> (Builder, Val)
 lowerDeref b t texpr =
     let
@@ -75,6 +81,7 @@ lowerDeref b t texpr =
     in
         (emit curinstr newb3, VTemp curtemp1)
 
+-- Expression address of lowering
 lowerAddressOf :: Builder -> Type -> TExpression -> (Builder, Val)
 lowerAddressOf b t texpr =
     case texprNode texpr of
@@ -92,6 +99,7 @@ lowerAddressOf b t texpr =
         TCast _ e -> lowerAddressOf b t e
         _ -> error "Address-of expects an lvalue"
 
+-- Expression binary lowering
 lowerBinary :: Builder -> Type -> Operator -> TExpression -> TExpression -> (Builder, Val)
 lowerBinary b typ op lhs rhs =
     let
@@ -102,6 +110,7 @@ lowerBinary b typ op lhs rhs =
     in
         (emit bininstr newb3, VTemp curtemp)
 
+-- Expression var lowering
 lowerVar :: Builder -> Type -> String -> (Builder, Val)
 lowerVar b typ name =
     let
@@ -110,11 +119,14 @@ lowerVar b typ name =
     in
         (emit varinstr newb, VTemp curtemp)
 
+-- Expression literal lowering
 lowerLiteral :: Builder -> Type -> String -> (Builder, Val)
 lowerLiteral b typ val =
     (b, VConst (read val :: Integer))
 
-
+-- =============================
+-- Helpers
+-- =============================
 ensureTemp :: Builder -> Val -> (Builder, Temp)
 ensureTemp b v =
     case v of
