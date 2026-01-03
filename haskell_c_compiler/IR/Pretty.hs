@@ -78,7 +78,7 @@ printOp = show
 printUnary :: UnaryOp -> String
 printUnary = show
 
-printArgs :: [Val] -> String
+printArgs :: [(Type, Val)] -> String
 printArgs [] = ""
-printArgs [v] = printVal v
-printArgs (v:vs) = printVal v ++ ", " ++ printArgs vs
+printArgs [(t, v)] = printType t ++ " " ++ printVal v
+printArgs ((t, v):vs) = printType t ++ " " ++ printVal v ++ ", " ++ printArgs vs

@@ -109,14 +109,14 @@ lowerExpression b texpr =
 lowerCall :: Builder -> Type -> String -> [TExpression] -> (Builder, Val)
 lowerCall b t name exprs =
     let
-        f :: Builder -> [TExpression] -> (Builder, [Val])
+        f :: Builder -> [TExpression] -> (Builder, [(Type, Val)])
         f b [] = (b, [])
         f b (e:es) =
             let
                 (newb1, v) = lowerExpression b e
                 (newb2, vals) = f newb1 es
             in
-                (newb2, v : vals)
+                (newb2, (texprType e, v) : vals)
         (newb1, vals) = f b exprs
     in
         case t of

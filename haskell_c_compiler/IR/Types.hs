@@ -22,6 +22,6 @@ data Instr
     | ICast Temp Type Val
     | IUnaryOp Temp Type UnaryOp Val
     | IJump Label
-    | ICall (Maybe Temp) String [Val]
+    | ICall (Maybe Temp) String [(Type, Val)]
     | IReturn (Maybe (Type, Val))
     deriving (Show, Eq)
