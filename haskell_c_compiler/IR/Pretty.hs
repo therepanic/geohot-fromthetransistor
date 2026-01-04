@@ -19,8 +19,8 @@ printInstr (IUnaryOp t ty u v) =
     ++ printUnary u ++ "." ++ printType ty
     ++ " " ++ printVal v
 
-printInstr (IAddrOf t name) =
-    "   " ++ printTemp t ++ " = addrof [" ++ name ++ "]"
+printInstr (IAddrOf t ty name) =
+    "   " ++ printTemp t ++ " = addrof [" ++ name ++ "]: " ++ printType ty 
 
 printInstr (ILoad t ty addr) =
     "   " ++ printTemp t ++ " = load." ++ printType ty

@@ -4,7 +4,7 @@ import AST.Type
 import AST.Operator
 import AST.UnaryOp
 
-newtype Temp  = Temp Int deriving (Show, Eq)
+newtype Temp  = Temp Int deriving (Show, Eq, Ord)
 newtype Label = Label Int deriving (Show, Eq)
 
 data Val = VTemp Temp | VConst Integer deriving (Show, Eq)
@@ -15,7 +15,7 @@ data Instr
     = ILabel Label
     | IMov Temp Type Val
     | IBin Temp Type Operator Val Val
-    | IAddrOf Temp String
+    | IAddrOf Temp Type String
     | ILoad Temp Type Addr
     | IStore Addr Type Val
     | ICondJump Operator Type Val Val Label Label

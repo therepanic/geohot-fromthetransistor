@@ -174,7 +174,7 @@ lowerAddressOf b texpr =
                 let
                     (newb2, curtemp) = freshTemp newb1
                 in
-                    (emit (IAddrOf curtemp name) newb2, VTemp curtemp)
+                    (emit (IAddrOf curtemp (texprType texpr) name) newb2, VTemp curtemp)
 
 -- Expression binary lowering
 lowerBinary :: Builder -> Type -> Operator -> TExpression -> TExpression -> (Builder, Val)
