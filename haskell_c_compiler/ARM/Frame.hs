@@ -2,6 +2,7 @@ module ARM.Frame where
 
 import qualified Data.Map.Strict as Map
 
+import AST.Type
 import IR.Types
 
 data Frame = Frame

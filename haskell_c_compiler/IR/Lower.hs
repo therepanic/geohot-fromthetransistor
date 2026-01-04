@@ -120,12 +120,12 @@ lowerCall b t name exprs =
         (newb1, vals) = f b exprs
     in
         case t of
-            PrimitiveType Void -> (emit (ICall Nothing name vals) newb1, VConst 0)
+            PrimitiveType Void -> (emit (ICall Nothing t name vals) newb1, VConst 0)
             _ ->
                 let
                     (newb2, curtemp) = freshTemp newb1
                 in
-                    (emit (ICall (Just curtemp) name vals) newb2, VTemp curtemp)
+                    (emit (ICall (Just curtemp) t name vals) newb2, VTemp curtemp)
 
 -- Expression unary lowering
 lowerUnary :: Builder -> Type -> UnaryOp -> TExpression -> (Builder, Val)
@@ -156,7 +156,7 @@ lowerDeref :: Builder -> Type -> TExpression -> (Builder, Val)
 lowerDeref b t texpr =
     let
         (newb1, curval) = lowerExpression b texpr
-        (newb2, curtemp) = ensureTemp newb1 curval
+        (newb2, curtemp) = ensureTemp newb1 (texprType texpr) curval
         (newb3, curtemp1) = freshTemp newb2
         curinstr = ILoad curtemp1 t (ATemp curtemp)
     in
@@ -204,15 +204,15 @@ lowerLiteral b typ val =
 -- =============================
 -- Helpers
 -- =============================
-ensureTemp :: Builder -> Val -> (Builder, Temp)
-ensureTemp b v =
+ensureTemp :: Builder -> Type -> Val -> (Builder, Temp)
+ensureTemp b ty v =
     case v of
         VTemp t -> (b, t)
         VConst _ ->
             let
                 (newb1, t) = freshTemp b
             in
-                (emit (IMov t v) newb1, t)
+                (emit (IMov t ty v) newb1, t)
 
 lowerAddr :: Builder -> TExpression -> (Builder, Addr)
 lowerAddr b te =
@@ -222,7 +222,7 @@ lowerAddr b te =
         TDeref p ->
             let
                 (newb1, pv) = lowerExpression b p
-                (newb2, tp) = ensureTemp newb1 pv
+                (newb2, tp) = ensureTemp newb1 (texprType p) pv
             in
                 (newb2, ATemp tp)
         TCast _ e ->

@@ -10,7 +10,7 @@ printIR instrs = unlines (map printInstr instrs)
 
 printInstr :: Instr -> String
 printInstr (ILabel l) = printLabel l ++ ":"
-printInstr (IMov t v) = "   " ++ printTemp t ++ " = mov " ++ printVal v
+printInstr (IMov t ty v) = "   " ++ printTemp t ++ " = mov " ++ printVal v
 printInstr (IBin t ty op v1 v2) = " " ++ printTemp t ++ " = " 
     ++ printOp op ++ "." ++ printType ty
     ++ " " ++ printVal v1 ++ " " ++ printVal v2
@@ -42,12 +42,13 @@ printInstr (ICondJump op ty v1 v2 lt lf) =
 printInstr (IJump l) =
     "   jump " ++ printLabel l
 
-printInstr (ICall Nothing name args) =
-    "   call " ++ name ++ "(" ++ printArgs args ++ ")"
+printInstr (ICall Nothing retTy name args) =
+    "  call." ++ printType retTy ++ " " ++ name ++ "(" ++ printArgs args ++ ")"
 
-printInstr (ICall (Just t) name args) =
-    "   " ++ printTemp t ++ " = call "
-    ++ name ++ "(" ++ printArgs args ++ ")"
+printInstr (ICall (Just t) retTy name args) =
+    "  " ++ printTemp t ++ " = call." ++ printType retTy ++ " "
+        ++ name ++ "(" ++ printArgs args ++ ")"
+
 
 printInstr (IReturn Nothing) =
     "   return"

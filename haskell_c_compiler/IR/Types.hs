@@ -13,7 +13,7 @@ data Addr = AVar String | ATemp Temp deriving (Show, Eq)
 
 data Instr
     = ILabel Label
-    | IMov Temp Val
+    | IMov Temp Type Val
     | IBin Temp Type Operator Val Val
     | IAddrOf Temp String
     | ILoad Temp Type Addr
@@ -22,6 +22,6 @@ data Instr
     | ICast Temp Type Val
     | IUnaryOp Temp Type UnaryOp Val
     | IJump Label
-    | ICall (Maybe Temp) String [(Type, Val)]
+    | ICall (Maybe Temp) Type String [(Type, Val)]
     | IReturn (Maybe (Type, Val))
     deriving (Show, Eq)
