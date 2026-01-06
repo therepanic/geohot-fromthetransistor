@@ -64,14 +64,14 @@ genInstr f (IAddrOf t ty name) _ =
         ] ++ storeTemp32 f R0 t
 
 genInstr f (ICondJump op (PrimitiveType Long) lhs rhs lTrue lFalse) _ =
-    loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs
+    loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs ++ genCondJump64 op lTrue lFalse
 genInstr f (ICondJump op _ lhs rhs lTrue lFalse) _ =
     let
         load1 = loadVal32 f R0 lhs
         load2 = loadVal32 f R1 rhs
         cond = relOpToCond op
     in
-        load1 ++ load2 ++ [Cmp R0 (OpReg R1), B cond lTrue, B Al lFalse] ++ genCondJump64 op lTrue lFalse
+        load1 ++ load2 ++ [Cmp R0 (OpReg R1), B cond lTrue, B Al lFalse] 
 
 -- =============================
 -- Helpers
@@ -91,7 +91,7 @@ genCondJump64 op lTrue lFalse =
         AST.Operator.Neq ->
             [
                 Cmp R1 (OpReg R3)
-                , B Ne lFalse
+                , B Ne lTrue
                 , Cmp R0 (OpReg R2)
                 , B Ne lTrue
                 , B Al lFalse
