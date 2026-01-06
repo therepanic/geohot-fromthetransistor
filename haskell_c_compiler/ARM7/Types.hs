@@ -17,12 +17,13 @@ data AsmInstr
     = Label Label
     | Mov Reg Operand
     | Ldr Reg Mem
+    | LdrLit Reg Integer
     | Str Reg Mem
     | Add Reg Reg Operand
     | Sub Reg Reg Operand
     | Mul Reg Reg Reg
     | Cmp Reg Operand
-    | B Cond Label
+    | B Cond  Label
     | Bl String
     | Push [Reg]
     | Pop [Reg]
