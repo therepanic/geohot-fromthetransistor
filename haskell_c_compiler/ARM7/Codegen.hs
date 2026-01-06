@@ -4,15 +4,25 @@ import ARM7.Frame
 import ARM7.Types
 import AST.Type
 import AST.Operator
+import Control.Monad.Reader (Reader, runReader, ask, asks)
 import Data.Bits
 import IR.Types
 
-genInstr :: Frame -> Instr -> Label -> [AsmInstr]
+data CgEnv = CgEnv
+    {
+        frame :: Frame
+        , returnLabel :: Label
+    }
 
-genInstr _ (ILabel l) _ = [ARM7.Types.Label l]
+type Codegen a = Reader CgEnv a
 
-genInstr f (IMov t ty val) _ =
-    case ty of
+genInstr :: Instr -> Codegen [AsmInstr]
+
+genInstr (ILabel l) = pure [ARM7.Types.Label l]
+
+genInstr (IMov t ty val) = do
+    f <- asks frame
+    pure $ case ty of
         PrimitiveType Long ->
             let
                 loadInstrs = loadVal64 f R0 R1 val
@@ -24,8 +34,9 @@ genInstr f (IMov t ty val) _ =
             in
                 loadInstrs ++ storeTemp32 f R0 t
 
-genInstr f (ILoad t ty addr) _ =
-    case ty of
+genInstr (ILoad t ty addr) = do
+    f <- asks frame
+    pure $ case ty of
         PrimitiveType Long ->
             let
                 loadInstrs = loadFromAddr64 f R0 R1 R2 addr
@@ -37,15 +48,18 @@ genInstr f (ILoad t ty addr) _ =
             in
                 loadInstrs ++ storeTemp32 f R0 t
 
-genInstr f (IStore a ty v) _ =
-    case ty of
+genInstr (IStore a ty v) = do
+    f <- asks frame
+    pure $ case ty of
         PrimitiveType Long -> storeInAddr64 f a R0 R1 R2 v
         _ -> storeInAddr32 f a R0 R2 v
 
-genInstr f (IJump l) _ = [B Al l]
+genInstr (IJump l) = pure [B Al l]
 
-genInstr f (IReturn val) rtrn =
-    case val of
+genInstr (IReturn val) = do
+    f <- asks frame
+    rtrn <- asks returnLabel
+    pure $ case val of
         Just (t, v) ->
             (case t of
                 PrimitiveType Long -> loadVal64 f R0 R1 v
@@ -53,25 +67,26 @@ genInstr f (IReturn val) rtrn =
             ) ++ [B Al rtrn]
         Nothing -> [B Al rtrn]
 
-genInstr f (IAddrOf t ty name) _ =
-    let
-        Mem base off = varAddr f name
-    in
+genInstr (IAddrOf t _ name) = do
+    f <- asks frame
+    let Mem base off = varAddr f name
+    pure $
         [
             Mov R0 (OpReg base),
             LdrLit R1 (fromIntegral off),
             Add R0 R0 (OpReg R1)
         ] ++ storeTemp32 f R0 t
 
-genInstr f (ICondJump op (PrimitiveType Long) lhs rhs lTrue lFalse) _ =
-    loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs ++ genCondJump64 op lTrue lFalse
-genInstr f (ICondJump op _ lhs rhs lTrue lFalse) _ =
+genInstr (ICondJump op (PrimitiveType Long) lhs rhs lTrue lFalse) = do
+    f <- asks frame
+    pure $ loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs ++ genCondJump64 op lTrue lFalse
+genInstr (ICondJump op _ lhs rhs lTrue lFalse) = do
+    f <- asks frame
     let
         load1 = loadVal32 f R0 lhs
         load2 = loadVal32 f R1 rhs
         cond = relOpToCond op
-    in
-        load1 ++ load2 ++ [Cmp R0 (OpReg R1), B cond lTrue, B Al lFalse] 
+    pure $ load1 ++ load2 ++ [Cmp R0 (OpReg R1), B cond lTrue, B Al lFalse] 
 
 -- =============================
 -- Helpers
