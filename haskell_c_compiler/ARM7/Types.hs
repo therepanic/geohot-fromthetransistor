@@ -1,4 +1,4 @@
-module ARM.Types where
+module ARM7.Types where
 
 import IR.Types
 
@@ -6,6 +6,7 @@ data Reg = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7
     | R8 | R9 | R10 | FP | SP | LR
 
 data Cond = Eq | Ne | Lt | Le | Gt | Ge | Al
+  | Lo | Hs | Hi | Ls
 
 data Mem = Mem Reg Int | MemReg Reg
 
@@ -23,7 +24,8 @@ data AsmInstr
     | Sub Reg Reg Operand
     | Mul Reg Reg Reg
     | Cmp Reg Operand
-    | B Cond  Label
-    | Bl String
+    | B Cond Label
+    | Bl Label
+    | BxLr
     | Push [Reg]
     | Pop [Reg]

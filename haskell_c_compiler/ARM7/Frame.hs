@@ -1,8 +1,8 @@
-module ARM.Frame where
+module ARM7.Frame where
 
 import qualified Data.Map.Strict as Map
 
-import ARM.Types
+import ARM7.Types
 import AST.Type
 import Data.List (foldl')
 import IR.Types
