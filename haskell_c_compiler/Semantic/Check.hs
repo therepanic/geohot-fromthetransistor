@@ -162,28 +162,46 @@ checkExpression ge le (Binary op l r) =
         t2 = texprType tr
     in
         case op of
-            Plus -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
-            Minus -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
-            Mul -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
-            Div -> let mtype = numType t1 t2 in TExpression {texprType = mtype, texprNode = TBinary op tl tr}
+            Plus -> let mtype = numType t1 t2 
+                in TExpression {texprType = mtype, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
+            Minus -> let mtype = numType t1 t2 
+                in TExpression {texprType = mtype, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
+            Mul -> let mtype = numType t1 t2
+                in TExpression {texprType = mtype, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
+            Div -> let mtype = numType t1 t2
+                in TExpression {texprType = mtype, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
             Gt -> if isNumeric t1 && isNumeric t2
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
                 else error "Relational op expects numeric operands"
             Lt -> if isNumeric t1 && isNumeric t2
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
                 else error "Relational op expects numeric operands"
             Gte -> if isNumeric t1 && isNumeric t2
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
                 else error "Relational op expects numeric operands"
             Lte -> if isNumeric t1 && isNumeric t2
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
                 else error "Relational op expects numeric operands"
-            Eq -> if (isNumeric t1 && isNumeric t2) || (isPointer t1 && isPointer t2)
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
-                else error "Eq expects both numeric or both pointers"
-            Neq -> if (isNumeric t1 && isNumeric t2) || (isPointer t1 && isPointer t2)
-                then TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
-                else error "Eq expects both numeric or both pointers"
+            Eq -> if isNumeric t1 && isNumeric t2
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
+                else if isPointer t1 && isPointer t2
+                    then
+                        TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                    else
+                        error "Eq expects both numeric or both pointers"
+            Neq -> if isNumeric t1 && isNumeric t2
+                then let mtype = numType t1 t2
+                in TExpression {texprType = PrimitiveType Int, texprNode = TBinary op (coerceAssign mtype tl) (coerceAssign mtype tr)}
+                else if isPointer t1 && isPointer t2
+                    then
+                        TExpression {texprType = PrimitiveType Int, texprNode = TBinary op tl tr}
+                    else
+                        error "Eq expects both numeric or both pointers"
 
 -- Expression addres of checking
 checkExpression ge le (AddressOf expr) =
@@ -274,6 +292,6 @@ coerceAssign lhs te =
     case (lhs, texprType te) of
         (t1, t2) | t1 == t2 -> te
         (PrimitiveType Long, PrimitiveType Int) -> TExpression { texprType = lhs, texprNode = TCast lhs te }
-        (PrimitiveType Int, PrimitiveType Long) -> error "narrowing conversion long -> int"
+        (PrimitiveType Int, PrimitiveType Long) -> TExpression { texprType = lhs, texprNode = TCast lhs te }
         _ -> error "type mismatch in initializer"
 
