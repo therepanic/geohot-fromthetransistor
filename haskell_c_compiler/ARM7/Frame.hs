@@ -60,7 +60,7 @@ step instr f =
         IMov t ty _ -> allocTemp t ty f
         IBin t ty _ _ _ -> allocTemp t ty f
         IUnaryOp t ty _ _ -> allocTemp t ty f
-        ICast t ty _ -> allocTemp t ty f
+        ICast t _ ty _ -> allocTemp t ty f
         ILoad t ty addr -> allocTemp t ty (allocVarsInAddr addr ty f)
         IStore addr ty _ -> allocVarsInAddr addr ty f
         IAddrOf t ty name -> allocTemp t (PointerType ty) (allocVar name ty f)

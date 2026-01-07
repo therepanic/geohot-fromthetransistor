@@ -19,7 +19,7 @@ data Instr
     | ILoad Temp Type Addr
     | IStore Addr Type Val
     | ICondJump Operator Type Val Val Label Label
-    | ICast Temp Type Val
+    | ICast Temp Type Type Val
     | IUnaryOp Temp Type UnaryOp Val
     | IJump Label
     | ICall (Maybe Temp) Type String [(Type, Val)]

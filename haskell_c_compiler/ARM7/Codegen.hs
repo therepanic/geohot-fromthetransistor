@@ -111,6 +111,15 @@ genInstr (IUnaryOp t ty op v) = do
                     ++ storeTemp64 f R0 R1 t
                 _ -> pure $ loadVal32 f R0 v ++ [Rsb R0 R0 (OpImm 0)] ++ storeTemp32 f R0 t
 
+genInstr (ICast t fromType toType v) = do
+    f <- asks frame
+    case (fromType, toType) of
+        (PrimitiveType Int, PrimitiveType Long) -> pure $ loadVal32 f R0 v ++ [Asr R1 R0 (OpImm 31)]
+            ++ storeTemp64 f R0 R1 t
+        (PrimitiveType Long, PrimitiveType Int) -> pure $ loadVal64 f R0 R1 v ++ storeTemp32 f R0 t
+        (PrimitiveType Int, PointerType _) -> pure $ loadVal32 f R0 v ++ storeTemp32 f R0 t
+        _ -> pure []
+
 -- =============================
 -- Helpers
 -- =============================

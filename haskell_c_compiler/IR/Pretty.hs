@@ -30,8 +30,8 @@ printInstr (IStore addr ty v) =
     "   store." ++ printType ty
     ++ " " ++ printAddr addr ++ ", " ++ printVal v
 
-printInstr (ICast t ty v) =
-    "   " ++ printTemp t ++ " = cast." ++ printType ty
+printInstr (ICast t fromType toType v) =
+    "   " ++ printTemp t ++ " = from " ++ printType fromType ++ " cast." ++ printType toType
     ++ " " ++ printVal v
 
 printInstr (ICondJump op ty v1 v2 lt lf) =

@@ -19,6 +19,7 @@ data AsmInstr
     | Mov Cond Reg Operand
     | Ldr Reg Mem
     | LdrLit Reg Integer
+    | Asr Reg Reg Operand
     | Str Reg Mem
     | Add Reg Reg Operand
     | Sub Reg Reg Operand

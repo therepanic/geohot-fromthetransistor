@@ -140,16 +140,17 @@ lowerUnary b t u texpr =
 lowerCast :: Builder -> Type -> TExpression -> (Builder, Val)
 lowerCast b toType texpr =
     let
+        fromType = texprType texpr
         (newb1, v) = lowerExpression b texpr
     in
-        if texprType texpr == toType
+        if fromType == toType
             then
                 (newb1, v)
             else
                 let
                     (newb2, curtemp) = freshTemp newb1
                 in
-                    (emit (ICast curtemp toType v) newb2, VTemp curtemp)
+                    (emit (ICast curtemp fromType toType v) newb2, VTemp curtemp)
 
 -- Expression deref lowering
 lowerDeref :: Builder -> Type -> TExpression -> (Builder, Val)
