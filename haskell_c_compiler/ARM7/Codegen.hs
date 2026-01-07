@@ -4,6 +4,7 @@ import ARM7.Frame
 import ARM7.Types
 import AST.Type
 import AST.Operator
+import AST.UnaryOp
 import Control.Monad.Reader (Reader, runReader, ask, asks)
 import Data.Bits
 import IR.Types
@@ -72,7 +73,7 @@ genInstr (IAddrOf t _ name) = do
     let Mem base off = varAddr f name
     pure $
         [
-            Mov R0 (OpReg base),
+            Mov Al R0 (OpReg base),
             LdrLit R1 (fromIntegral off),
             Add R0 R0 (OpReg R1)
         ] ++ storeTemp32 f R0 t
@@ -87,6 +88,28 @@ genInstr (ICondJump op _ lhs rhs lTrue lFalse) = do
         load2 = loadVal32 f R1 rhs
         cond = relOpToCond op
     pure $ load1 ++ load2 ++ [Cmp R0 (OpReg R1), B cond lTrue, B Al lFalse] 
+
+genInstr (IUnaryOp t ty op v) = do
+    f <- asks frame
+    case op of
+        Pos ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 v ++ storeTemp64 f R0 R1 t
+                _ -> pure $ loadVal32 f R0 v ++ storeTemp32 f R0 t
+        Not ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 v
+                    ++ [Orr R2 R0 (OpReg R1), Cmp R2 (OpImm 0), Mov ARM7.Types.Eq R0 (OpImm 1), Mov ARM7.Types.Ne R0 (OpImm 0)]
+                    ++ storeTemp32 f R0 t
+                _ -> pure $ loadVal32 f R0 v
+                    ++ [Cmp R0 (OpImm 0), Mov ARM7.Types.Eq R0 (OpImm 1), Mov Ne R0 (OpImm 0)]
+                    ++ storeTemp32 f R0 t
+        Neg ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 v
+                    ++ [Rsbs R0 R0 (OpImm 0), Rsc R1 R1 (OpImm 0)]
+                    ++ storeTemp64 f R0 R1 t
+                _ -> pure $ loadVal32 f R0 v ++ [Rsb R0 R0 (OpImm 0)] ++ storeTemp32 f R0 t
 
 -- =============================
 -- Helpers

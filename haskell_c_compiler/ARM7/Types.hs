@@ -16,12 +16,16 @@ data Operand
 
 data AsmInstr
     = Label Label
-    | Mov Reg Operand
+    | Mov Cond Reg Operand
     | Ldr Reg Mem
     | LdrLit Reg Integer
     | Str Reg Mem
     | Add Reg Reg Operand
     | Sub Reg Reg Operand
+    | Rsb Reg Reg Operand
+    | Rsbs Reg Reg Operand
+    | Rsc Reg Reg Operand
+    | Orr Reg Reg Operand
     | Mul Reg Reg Reg
     | Cmp Reg Operand
     | B Cond Label
