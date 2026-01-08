@@ -4,6 +4,7 @@ import qualified Data.Map.Strict as Map
 
 import ARM7.Types
 import AST.Type
+import AST.Operator
 import Data.List (foldl')
 import IR.Types
 
@@ -58,6 +59,12 @@ step :: Instr -> Frame -> Frame
 step instr f =
     case instr of
         IMov t ty _ -> allocTemp t ty f
+        IBin t ty AST.Operator.Gt _ _ -> allocTemp t (PrimitiveType Int) f
+        IBin t ty AST.Operator.Lt _ _ -> allocTemp t (PrimitiveType Int) f
+        IBin t ty AST.Operator.Gte _ _ -> allocTemp t (PrimitiveType Int) f
+        IBin t ty AST.Operator.Lte _ _ -> allocTemp t (PrimitiveType Int) f
+        IBin t ty AST.Operator.Eq _ _ -> allocTemp t (PrimitiveType Int) f
+        IBin t ty AST.Operator.Neq _ _ -> allocTemp t (PrimitiveType Int) f
         IBin t ty _ _ _ -> allocTemp t ty f
         IUnaryOp t ty _ _ -> allocTemp t ty f
         ICast t _ ty _ -> allocTemp t ty f

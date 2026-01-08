@@ -6,7 +6,7 @@ import AST.Type
 import AST.Operator
 import AST.UnaryOp
 import Control.Monad.State
-import Control.Monad.Reader (ReaderT, runReader, ask, asks)
+import Control.Monad.Reader (ReaderT, runReaderT, ask, asks)
 import Data.Bits
 import IR.Types
 
