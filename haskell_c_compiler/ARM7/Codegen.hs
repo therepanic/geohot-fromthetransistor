@@ -5,7 +5,8 @@ import ARM7.Types
 import AST.Type
 import AST.Operator
 import AST.UnaryOp
-import Control.Monad.Reader (Reader, runReader, ask, asks)
+import Control.Monad.State
+import Control.Monad.Reader (ReaderT, runReader, ask, asks)
 import Data.Bits
 import IR.Types
 
@@ -15,7 +16,13 @@ data CgEnv = CgEnv
         , returnLabel :: Label
     }
 
-type Codegen a = Reader CgEnv a
+type Codegen a = ReaderT CgEnv (State Int) a
+
+freshAsmLabel :: Codegen Label
+freshAsmLabel = do
+    n <- get
+    put (n + 1)
+    pure (IR.Types.Label n)
 
 genInstr :: Instr -> Codegen [AsmInstr]
 
@@ -120,11 +127,70 @@ genInstr (ICast t fromType toType v) = do
         (PrimitiveType Int, PointerType _) -> pure $ loadVal32 f R0 v ++ storeTemp32 f R0 t
         _ -> pure []
 
-
+genInstr (IBin t ty op lhs rhs) = do
+    f <- asks frame
+    case op of
+        Plus ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs
+                    ++ [Adds R0 R0 (OpReg R2), Adc R1 R1 (OpReg R3)] ++ storeTemp64 f R0 R1 t
+                _ -> pure $ loadVal32 f R0 lhs ++ loadVal32 f R1 rhs ++ [Add R0 R0 (OpReg R1)]
+                    ++ storeTemp32 f R0 t
+        Minus ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs
+                    ++ [Subs R0 R0 (OpReg R2), Sbc R1 R1 (OpReg R3)] ++ storeTemp64 f R0 R1 t
+                _ -> pure $ loadVal32 f R0 lhs ++ loadVal32 f R1 rhs 
+                    ++ [Sub R0 R0 (OpReg R1)] ++ storeTemp32 f R0 t
+        AST.Operator.Mul ->
+            case ty of
+                PrimitiveType Long -> pure $ loadVal64 f R0 R1 lhs ++ loadVal64 f R2 R3 rhs
+                    ++ [Bl "__aeabi_lmul"] ++ storeTemp64 f R0 R1 t
+                _ -> pure $ loadVal32 f R0 lhs ++ loadVal32 f R1 rhs
+                    ++ [ARM7.Types.Mul R0 R0 R1] ++ storeTemp32 f R0 t
+        Div -> error "Todo"
+        AST.Operator.Gt -> genCmpBin f t ty op lhs rhs
+        AST.Operator.Lt -> genCmpBin f t ty op lhs rhs
+        AST.Operator.Gte -> genCmpBin f t ty op lhs rhs
+        AST.Operator.Lte -> genCmpBin f t ty op lhs rhs
+        AST.Operator.Eq -> genCmpBin f t ty op lhs rhs
+        AST.Operator.Neq -> genCmpBin f t ty op lhs rhs
 
 -- =============================
 -- Helpers
 -- =============================
+
+emitBool64 :: Operator -> Label -> Label -> Label -> [AsmInstr]
+emitBool64 op lTrue lFalse lEnd = genCondJump64 op lTrue lFalse ++
+    [ARM7.Types.Label lTrue
+    , Mov Al R0 (OpImm 1)
+    , B Al lEnd
+    , ARM7.Types.Label lFalse
+    , Mov Al R0 (OpImm 0)
+    , ARM7.Types.Label lEnd]
+
+emitBool32 :: Cond -> [AsmInstr]
+emitBool32 cond = [Mov Al R0 (OpImm 0), MovC cond R0 (OpImm 1)]
+
+genCmpBin :: Frame -> Temp -> Type -> Operator -> Val -> Val -> Codegen [AsmInstr]
+genCmpBin f t ty op lhs rhs =
+    case ty of
+        PrimitiveType Long -> do
+            lTrue <- freshAsmLabel
+            lFalse <- freshAsmLabel
+            lEnd <- freshAsmLabel
+            pure $
+                loadVal64 f R0 R1 lhs ++
+                loadVal64 f R2 R3 rhs ++
+                emitBool64 op lTrue lFalse lEnd ++
+                storeTemp32 f R0 t
+        _ ->
+            pure $
+                loadVal32 f R0 lhs ++
+                loadVal32 f R1 rhs ++
+                [Cmp R0 (OpReg R1)]
+                ++ emitBool32 (relOpToCond op)
+                ++ storeTemp32 f R0 t
 
 genCondJump64 :: Operator -> Label -> Label -> [AsmInstr]
 genCondJump64 op lTrue lFalse =
