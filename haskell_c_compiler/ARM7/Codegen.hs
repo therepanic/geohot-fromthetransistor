@@ -210,7 +210,7 @@ genCondJump64 op lTrue lFalse =
                 , Cmp R0 (OpReg R2)
                 , B Ne lTrue
                 , B Al lFalse
-            ]
+            ] 
         AST.Operator.Lt ->
             [
                 Cmp R1 (OpReg R3)

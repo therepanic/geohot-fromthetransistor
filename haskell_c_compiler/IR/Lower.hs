@@ -184,7 +184,8 @@ lowerBinary b typ op lhs rhs =
         (newb1, lexprVal) = lowerExpression b lhs
         (newb2, rexprVal) = lowerExpression newb1 rhs
         (newb3, curtemp) = freshTemp newb2
-        bininstr = IBin curtemp typ op lexprVal rexprVal
+        widthTy = if isRelOp op then texprType lhs else typ
+        bininstr = IBin curtemp widthTy op lexprVal rexprVal
     in
         (emit bininstr newb3, VTemp curtemp)
 
@@ -240,7 +241,7 @@ lowerCondJump b cond lTrue lFalse =
                 (newb1, lhsv) = lowerExpression b lhs
                 (newb2, rhsv) = lowerExpression newb1 rhs
             in
-                emit (ICondJump op (texprType cond) lhsv rhsv lTrue lFalse) newb2
+                emit (ICondJump op (texprType lhs) lhsv rhsv lTrue lFalse) newb2
         _ ->
             let
                 (newb1, v) = lowerExpression b cond
