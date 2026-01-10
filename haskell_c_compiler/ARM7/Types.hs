@@ -36,6 +36,6 @@ data AsmInstr
     | Cmp Reg Operand
     | B Cond Label
     | Bl String
-    | BxLr
+    | Bx Reg
     | Push [Reg]
     | Pop [Reg]

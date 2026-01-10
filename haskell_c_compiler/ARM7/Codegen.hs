@@ -9,6 +9,8 @@ import Control.Monad.State
 import Control.Monad.Reader (ReaderT, runReaderT, ask, asks)
 import Data.Bits
 import Data.Maybe (fromJust)
+import Data.List (foldl')
+
 import IR.Types
 
 data CgEnv = CgEnv
@@ -18,6 +20,58 @@ data CgEnv = CgEnv
     }
 
 type Codegen a = ReaderT CgEnv (State Int) a
+
+genFunction :: [(String, Type)] -> [Instr] -> Int -> [AsmInstr]
+genFunction args irbody seed =
+    let
+        f = buildFrame args irbody
+        rtrn = IR.Types.Label (seed + 1)
+        env = CgEnv {frame = f, returnLabel = rtrn}
+        body = evalState (runReaderT (concat <$> mapM genInstr irbody) env) (seed + 2)
+    in
+        prologue f ++ spillParams f args ++ body ++ [ARM7.Types.Label rtrn] ++ epilogue f
+
+spillParams :: Frame -> [(String, Type)] -> [AsmInstr]
+spillParams f args =
+    let
+        stackBase = 16
+        wordsPlan :: [(Int, Mem)]
+        wordsPlan = snd (foldl' step (0, []) args)
+
+        step :: (Int, [(Int, Mem)]) -> (String, Type) -> (Int, [(Int, Mem)])
+        step (i, acc) (name, ty) =
+            case ty of
+                PrimitiveType Long ->
+                    let
+                        Mem _ off = varAddr f name
+                    in
+                        (i + 2, acc ++ [(i, Mem FP off), (i + 1, Mem FP (off + 4))])
+                _ -> (i + 1, acc ++ [(i, varAddr f name)])
+
+        srcReg :: Int -> Maybe Reg
+        srcReg n = case n of
+            0 -> Just R0
+            1 -> Just R1
+            2 -> Just R2
+            3 -> Just R3
+            _ -> Nothing
+
+        srcStackMem :: Int -> Mem
+        srcStackMem n = Mem FP (stackBase + 4 * (n - 4))
+
+        saveRegs :: [AsmInstr]
+        saveRegs = [Str r m | (n, m) <- wordsPlan, Just r <- [srcReg n]]
+
+        saveStack :: [AsmInstr]
+        saveStack = concat [[Ldr R4 (srcStackMem n), Str R4 m] | (n, m) <- wordsPlan, n >= 4]
+    in
+        saveRegs ++ saveStack
+
+prologue :: Frame -> [AsmInstr]
+prologue f = [Push [R4, R5, FP, LR], Mov Al FP (OpReg SP)] ++ subSp (frameSize f)
+
+epilogue :: Frame -> [AsmInstr]
+epilogue f = addSp (frameSize f) ++ [Pop [R4, R5, FP, LR], Bx LR]
 
 freshAsmLabel :: Codegen Label
 freshAsmLabel = do
@@ -198,6 +252,11 @@ genInstr (ICall return returnType name args) = do
 -- =============================
 -- Helpers
 -- =============================
+
+subSp :: Int -> [AsmInstr]
+subSp n | n <= 0 = [] | otherwise = [LdrLit R0 (fromIntegral n), Sub SP SP (OpReg R0)]
+addSp :: Int -> [AsmInstr]
+addSp n | n <= 0 = [] | otherwise = [LdrLit R0 (fromIntegral n), Add SP SP (OpReg R0)]
 
 argWordCount :: [(Type, Val)] -> Int
 argWordCount = foldr (\(ty, _) acc -> acc + typeWords ty) 0
