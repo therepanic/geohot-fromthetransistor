@@ -8,6 +8,7 @@ import AST.UnaryOp
 import Control.Monad.State
 import Control.Monad.Reader (ReaderT, runReaderT, ask, asks)
 import Data.Bits
+import Data.Maybe (fromJust)
 import IR.Types
 
 data CgEnv = CgEnv
@@ -156,9 +157,63 @@ genInstr (IBin t ty op lhs rhs) = do
         AST.Operator.Eq -> genCmpBin f t ty op lhs rhs
         AST.Operator.Neq -> genCmpBin f t ty op lhs rhs
 
+genInstr (ICall return returnType name args) = do
+    f <- asks frame
+    let
+        words = argWordCount args
+        k = min 4 words
+        stackWords = max 0 (words - 4)
+        pad = if stackWords > 0 && (stackWords `mod` 2 == 1) then 1 else 0
+        totalWords = words + pad
+
+        pushPad :: [AsmInstr]
+        pushPad = if pad == 1 then pushImm 0 else []
+
+        pushArgs :: [AsmInstr]
+        pushArgs = concatMap (pushArg f) (reverse args)
+
+        loadRegs :: [AsmInstr]
+        loadRegs = take k [Ldr R0 (Mem SP 0), Ldr R1 (Mem SP 4), Ldr R2 (Mem SP 8), Ldr R3 (Mem SP 12)]
+
+        popRegWords :: [AsmInstr]
+        popRegWords = if k == 0 then [] else [Add SP SP (OpImm (fromIntegral (4 * k)))]
+
+        cleanupAfterCall :: [AsmInstr]
+        cleanupAfterCall =
+            let
+                rest = totalWords - k
+            in
+                if rest == 0 then [] else [Add SP SP (OpImm (fromIntegral (4 * rest)))]
+        saveReturn :: [AsmInstr]
+        saveReturn =
+            case return of
+                Nothing -> []
+                Just t ->
+                    case returnType of
+                        PrimitiveType Void -> []
+                        PrimitiveType Long -> storeTemp64 f R0 R1 t
+                        _ -> storeTemp32 f R0 t
+    pure $ pushPad ++ pushArgs ++ loadRegs ++ popRegWords ++ [Bl name] ++ cleanupAfterCall ++ saveReturn
+
 -- =============================
 -- Helpers
 -- =============================
+
+argWordCount :: [(Type, Val)] -> Int
+argWordCount = foldr (\(ty, _) acc -> acc + typeWords ty) 0
+
+typeWords :: Type -> Int
+typeWords (PrimitiveType Long) = 2
+typeWords _ = 1
+
+pushArg :: Frame -> (Type, Val) -> [AsmInstr]
+pushArg f (PrimitiveType Long, v) = loadVal64 f R4 R5 v ++ pushReg R5 ++ pushReg R4
+pushArg f (_, v) = loadVal32 f R4 v ++ pushReg R4
+
+pushReg :: Reg -> [AsmInstr]
+pushReg r = [Sub SP SP (OpImm 4), Str r (Mem SP 0)]
+pushImm :: Integer -> [AsmInstr]
+pushImm n = [LdrLit R4 n, Sub SP SP (OpImm 4), Str R4 (Mem SP 0)]
 
 emitBool64 :: Operator -> Label -> Label -> Label -> [AsmInstr]
 emitBool64 op lTrue lFalse lEnd = genCondJump64 op lTrue lFalse ++
