@@ -10,6 +10,7 @@ lex p = go p
     where
         go :: Pos -> String -> [Token]
         go p [] = [TokEOF p]
+        go p [c] = go1 p [c]
         go p s@(c:c1:cs)
             | c == '<' && c1 == '=' = TokLte p : go p{ col = col p + 2 } cs
             | c == '>' && c1 == '=' = TokGte p : go p{ col = col p + 2 } cs
@@ -40,13 +41,13 @@ lex p = go p
 lexDig :: Pos -> String -> [Token]
 lexDig p s =
     let
-        (f, s) = span isDigit s
+        (f, s') = span isDigit s
     in
-        TokNum f p : Lexer.Lexer.lex p{ col = col p + length f } s
+        TokNum f p : Lexer.Lexer.lex p{ col = col p + length f } s'
 
 lexIdent :: Pos -> String -> [Token]
 lexIdent p s =
     let
-        (f, s) = span isAlphaNum s
+        (f, s') = span isAlphaNum s
     in
-        TokIdent f p : Lexer.Lexer.lex p{ col = col p + length f } s
+        TokIdent f p : Lexer.Lexer.lex p{ col = col p + length f } s'
