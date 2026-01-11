@@ -1,4 +1,4 @@
-module Check where
+module Semantic.Check where
 
 import qualified Data.Map.Strict as Map
 

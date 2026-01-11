@@ -1,11 +1,11 @@
-module ARM.Codegen where
+module ARM7.Codegen where
 
 import ARM7.Frame
 import ARM7.Types
 import AST.Type
 import AST.Operator
 import AST.UnaryOp
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Monad.Reader (ReaderT, runReaderT, ask, asks)
 import Data.Bits
 import Data.Maybe (fromJust)
@@ -21,15 +21,29 @@ data CgEnv = CgEnv
 
 type Codegen a = ReaderT CgEnv (State Int) a
 
-genFunction :: [(String, Type)] -> [Instr] -> Int -> [AsmInstr]
-genFunction args irbody seed =
+genFunction :: [(String, Type)] -> [Instr] -> [AsmInstr]
+genFunction args irbody =
     let
+        seed = maxIrLabel irbody
         f = buildFrame args irbody
         rtrn = IR.Types.Label (seed + 1)
         env = CgEnv {frame = f, returnLabel = rtrn}
         body = evalState (runReaderT (concat <$> mapM genInstr irbody) env) (seed + 2)
     in
         prologue f ++ spillParams f args ++ body ++ [ARM7.Types.Label rtrn] ++ epilogue f
+
+maxIrLabel :: [Instr] -> Int
+maxIrLabel = foldr step 0
+    where
+        un (IR.Types.Label n) = n
+
+        step :: Instr -> Int -> Int
+        step instr acc =
+            case instr of
+                ILabel l -> max acc (un l)
+                IJump l  -> max acc (un l)
+                ICondJump _ _ _ _ lt lf -> max acc (max (un lt) (un lf))
+                _ -> acc
 
 spillParams :: Frame -> [(String, Type)] -> [AsmInstr]
 spillParams f args =
