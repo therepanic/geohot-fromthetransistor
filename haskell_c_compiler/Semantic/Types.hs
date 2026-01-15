@@ -5,7 +5,7 @@ import AST.UnaryOp
 import AST.Operator
 import AST.Lit
 
-newtype TProgram = TProgram [TFunction]
+newtype TProgram = TProgram [TFunction] deriving (Show, Eq)
 
 data TFunction = TFunction
     {

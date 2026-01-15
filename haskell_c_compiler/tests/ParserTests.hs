@@ -3,13 +3,13 @@ module ParserTests where
 import qualified AST.UnaryOp as U
 
 import AST.Expression
+import AST.Lit
 import AST.Operator
 import AST.Type
-import AST.Lit
+import AST.VarDecl
 import AST.Statement
 import Lexer.Token
 import Parser.Parser
-import AST.VarDecl
 import Tests
 
 p0 = Pos 0 0
@@ -61,6 +61,8 @@ test_statements =
 
 main :: IO ()
 main = do
+    putStrLn "Running parser tests..."
+
     test_precedence
     test_unary
     test_statements
