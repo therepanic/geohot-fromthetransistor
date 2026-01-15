@@ -177,7 +177,7 @@ parseReturn :: [Token] -> (Statement, [Token])
 parseReturn (TokIdent "return" _ : TokSemicolon _ : ts) = (Return Nothing, ts)
 parseReturn (TokIdent "return" _ : ts) =
     let
-        (expr, TokSemicolon _ : rest) = parseExpr ts
+        (expr, rest) = parseExpr ts
     in
         case rest of
             TokSemicolon _ : rest1 -> (Return (Just expr), rest1)

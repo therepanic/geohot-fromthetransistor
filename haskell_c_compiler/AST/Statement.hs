@@ -15,3 +15,4 @@ data Statement
     | While Expression [Statement]
 
     | VarDeclStmt VarDecl
+    deriving (Show, Eq)

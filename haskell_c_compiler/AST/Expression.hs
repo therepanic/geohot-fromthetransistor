@@ -18,3 +18,4 @@ data Expression
 
     | Literal Lit
     | Var String
+    deriving (Show, Eq)
