@@ -3,16 +3,17 @@ module ARM7.Types where
 import IR.Types
 
 data Reg = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7
-    | R8 | R9 | R10 | FP | SP | LR
+    | R8 | R9 | R10 | FP | SP | LR deriving (Show, Eq)
 
 data Cond = Eq | Ne | Lt | Le | Gt | Ge | Al
-  | Lo | Hs | Hi | Ls
+  | Lo | Hs | Hi | Ls deriving (Show, Eq)
 
-data Mem = Mem Reg Int | MemReg Reg
+data Mem = Mem Reg Int | MemReg Reg deriving (Show, Eq)
 
 data Operand
   = OpReg Reg
   | OpImm Integer
+  deriving (Show, Eq)
 
 data AsmInstr
     = Label Label
@@ -39,3 +40,4 @@ data AsmInstr
     | Bx Reg
     | Push [Reg]
     | Pop [Reg]
+    deriving (Show, Eq)
