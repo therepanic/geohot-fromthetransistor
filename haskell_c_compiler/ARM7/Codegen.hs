@@ -21,16 +21,17 @@ data CgEnv = CgEnv
 
 type Codegen a = ReaderT CgEnv (State Int) a
 
-genFunction :: [(String, Type)] -> [Instr] -> [AsmInstr]
-genFunction args irbody =
+genFunction :: [(String, Type)] -> [Instr] -> Int -> ([AsmInstr], Int)
+genFunction args irbody seed' =
     let
-        seed = maxIrLabel irbody
+        seed = max seed' (maxIrLabel irbody)
         f = buildFrame args irbody
         rtrn = IR.Types.Label (seed + 1)
         env = CgEnv {frame = f, returnLabel = rtrn}
-        body = evalState (runReaderT (concat <$> mapM genInstr irbody) env) (seed + 2)
+        (body, end) = runState (runReaderT (concat <$> mapM genInstr irbody) env) (seed + 2)
+        asm  = prologue f ++ spillParams f args ++ body ++ [ARM7.Types.Label rtrn] ++ epilogue f
     in
-        prologue f ++ spillParams f args ++ body ++ [ARM7.Types.Label rtrn] ++ epilogue f
+        (asm, end)
 
 maxIrLabel :: [Instr] -> Int
 maxIrLabel = foldr step 0
@@ -268,9 +269,9 @@ genInstr (ICall return returnType name args) = do
 -- =============================
 
 subSp :: Int -> [AsmInstr]
-subSp n | n <= 0 = [] | otherwise = [LdrLit R0 (fromIntegral n), Sub SP SP (OpReg R0)]
+subSp n | n <= 0 = [] | otherwise = [LdrLit R4 (fromIntegral n), Sub SP SP (OpReg R4)]
 addSp :: Int -> [AsmInstr]
-addSp n | n <= 0 = [] | otherwise = [LdrLit R0 (fromIntegral n), Add SP SP (OpReg R0)]
+addSp n | n <= 0 = [] | otherwise = [LdrLit R4 (fromIntegral n), Add SP SP (OpReg R4)]
 
 argWordCount :: [(Type, Val)] -> Int
 argWordCount = foldr (\(ty, _) acc -> acc + typeWords ty) 0

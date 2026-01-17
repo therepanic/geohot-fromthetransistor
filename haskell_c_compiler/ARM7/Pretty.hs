@@ -143,6 +143,7 @@ prettyRegList =
 prettyLabel :: Label -> String
 prettyLabel (IR.Types.Label n) =
     "L" ++ show n
+prettyLabel (IR.Types.LabelName s) = s
 
 prettyCond :: Cond -> String
 prettyCond c =

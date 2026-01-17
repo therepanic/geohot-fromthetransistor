@@ -29,6 +29,8 @@ lex p = go p
             | c == '*' = TokStar p : go p{ col = col p + 1 } cs
             | c == '/' = TokSlash p : go p{ col = col p + 1 } cs
             | c == '(' = TokLParen p : go p{ col = col p + 1 } cs
+            | c == '{' = TokLBrace p : go p{ col = col p + 1 } cs
+            | c == '}' = TokRBrace p : go p{ col = col p + 1 } cs
             | c == ')' = TokRParen p : go p{ col = col p + 1 } cs
             | c == '=' = TokAssign p : go p{ col = col p + 1 } cs
             | c == '!' = TokNot p : go p{ col = col p + 1 } cs

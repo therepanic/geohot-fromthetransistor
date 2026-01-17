@@ -5,7 +5,11 @@ import AST.Operator
 import AST.UnaryOp
 
 newtype Temp  = Temp Int deriving (Show, Eq, Ord)
-newtype Label = Label Int deriving (Show, Eq)
+data Label
+    = Label Int
+    | LabelName String
+    deriving (Show, Eq)
+
 
 data Val = VTemp Temp | VConst Integer deriving (Show, Eq)
 

@@ -28,8 +28,9 @@ genProgram :: TProgram -> [AsmInstr]
 genProgram (TProgram funs) =
     let
         lowered = evalState (mapM lowerOne funs) 0
+        (asms, _) = foldl' genStep ([], 0) lowered
     in
-        concatMap genOne lowered
+        asms
     where
         lowerOne :: TFunction -> State Int (TFunction, [Instr])
         lowerOne fn@TFunction{tfBody = body} = do
@@ -41,5 +42,9 @@ genProgram (TProgram funs) =
             put (nextLabel b1)
             pure (fn, ir)
 
-        genOne :: (TFunction, [Instr]) -> [AsmInstr]
-        genOne (TFunction{tfName = name, tfParams = params}, ir) = genFunction params ir
+        genStep :: ([AsmInstr], Int) -> (TFunction, [Instr]) -> ([AsmInstr], Int)
+        genStep (acc, asmSeed) (TFunction{tfName = name, tfParams = params}, ir) =
+            let
+                (asm, asmSeed') = genFunction params ir asmSeed
+            in
+                (acc ++ (ARM7.Types.Label (LabelName name) : asm), asmSeed')

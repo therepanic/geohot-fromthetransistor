@@ -19,7 +19,8 @@ collectFunctions s =
                 else Map.insert name (typ, gettypes args) env
             where
                 gettypes :: [(String, Type)] -> [Type]
-                gettypes ((n, t):a) = [y | (x, y) <- a]
+                gettypes [] = []
+                gettypes ((_, t):xs) = t : gettypes xs
         go env _ = env
     in
         foldl' go Map.empty s

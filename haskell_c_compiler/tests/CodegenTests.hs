@@ -56,7 +56,7 @@ test_return_label_and_function_shell :: IO ()
 test_return_label_and_function_shell = do
     let t0 = Temp 0
         ir = [IMov t0 intT (VConst 7), IReturn (Just (intT, VTemp t0))]
-        asm = genFunction [] ir
+        asm = fst (genFunction [] ir 0)
         rtrn = IR.Types.Label 1
 
     assert "prologue exists (Push + FP=SP)" $
@@ -76,7 +76,7 @@ test_cast_int_to_long_signext :: IO ()
 test_cast_int_to_long_signext = do
     let t0 = Temp 0
         ir = [ICast t0 intT longT (VConst 1), IReturn Nothing]
-        asm = genFunction [] ir
+        asm = fst (genFunction [] ir 0)
     assert "ICast int->long emits Asr R1 R0 #31" $
         containsInOrder (\i -> case i of Asr R1 R0 (OpImm 31) -> True; _ -> False) asm
 
@@ -86,7 +86,7 @@ test_condjump_32_shape = do
     let lt = IR.Types.Label 10
         lf = IR.Types.Label 11
         ir = [ICondJump AST.Operator.Lt intT (VConst 1) (VConst 2) lt lf, ILabel lt, IReturn Nothing, ILabel lf, IReturn Nothing]
-        asm = genFunction [] ir
+        asm = fst (genFunction [] ir 0)
 
     assert "ICondJump 32 emits Cmp; B(Lt) true; B Al false" $
         subseq
@@ -105,7 +105,7 @@ test_condjump_64_eq_shape = do
             , IReturn Nothing
             , ILabel lf
             , IReturn Nothing]
-        asm = genFunction [] ir
+        asm = fst (genFunction [] ir 0)
 
     assert "ICondJump 64 Eq emits hi-compare then lo-compare pattern" $
         subseq
@@ -120,7 +120,7 @@ test_call_saves_return :: IO ()
 test_call_saves_return = do
     let t0 = Temp 0
         ir = [ICall (Just t0) intT "foo" [(intT, VConst 1)], IReturn (Just (intT, VTemp t0))]
-        asm = genFunction [] ir
+        asm = fst (genFunction [] ir 0)
 
     assert "call emits Bl foo" $
         containsInOrder (isBl "foo") asm
