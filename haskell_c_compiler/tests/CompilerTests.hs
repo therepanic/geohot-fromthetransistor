@@ -56,6 +56,24 @@ test_compile_while_loop = do
     assertHas "sub" out
     assertHas "bx lr" out
 
+test_compile_long_add :: IO ()
+test_compile_long_add = do
+    let src = "long main(){ long a = 1; long b = 2; return a + b; }"
+        out = compile src
+    assertHas "adds" out
+    assertHas "adc" out
+    assertHas "bx lr" out
+
+test_compile_pointer_basic :: IO ()
+test_compile_pointer_basic = do
+    let src = "int main(){ int a = 5; return *(&a); }"
+        out = compile src
+
+    assertHas "add" out
+    assertHas "ldr" out
+    assertHas "str" out
+    assertHas "bx lr" out
+
 main :: IO ()
 main = do
     putStrLn "Running compiler tests..."
@@ -64,4 +82,6 @@ main = do
     test_compile_if_relop_branches
     test_compile_semantic_error
     test_compile_while_loop
+    test_compile_long_add
+    test_compile_pointer_basic
     putStrLn "OK"
