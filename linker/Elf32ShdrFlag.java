@@ -1,4 +1,4 @@
-public class SHT_RELFlag {
+public class Elf32ShdrFlag {
 
     public static final int SHF_WRITE = 0x1;
 

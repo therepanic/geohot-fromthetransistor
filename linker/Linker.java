@@ -2,7 +2,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class Linker {
@@ -46,19 +48,65 @@ public class Linker {
         return sections;
     }
 
-    private static void link(byte[] data) {
+    private static void fillPlacementOffset(byte[] data, Map<Placement, Long> placementOffset, int fileIdx) {
         Elf32Ehdr header = parseHeader(data);
         Elf32Shdr[] sections = parseSections(data, header);
+        for (Elf32Shdr section : sections) {
+            // if it symtab
+            if (section.shType() == Elf32ShdrType.SHT_SYMTAB) {
+                byte[] strtab = readSectionBytes(data, sections[(int) section.shLink()]);
+                for (int i = 0; i < section.shSize() / section.shEntsize(); i++) {
+                    int offset = (int) (section.shOffset() + i * section.shEntsize());
+
+                    long stName = readUInt32LE(data, offset); offset += 4;
+                    long stValue = readUInt32LE(data, offset); offset += 4;
+                    long stSize = readUInt32LE(data, offset); offset += 4;
+                    long stInfo = data[offset] & 0xFF; offset++;
+                    long stOther = data[offset] & 0xFF; offset++;
+                    int stShndx = readUInt16LE(data, offset); offset += 2;
+
+                    if (stShndx != Elf32ShdrIndex.SHN_UNDEF) {
+                        if (stShndx <= 0 || stShndx >= sections.length || stName == 0) continue;
+                        placementOffset.put(new Placement(stShndx, fileIdx, readCString(strtab, (int) stName)), stValue);
+                    }
+                }
+            }
+        }
+    }
+
+    private static int buildOutText(byte[] data, byte[] out, int cursor, Map<Placement, Long> placementOffset, int fileIdx) {
+        Elf32Ehdr header = parseHeader(data);
+        Elf32Shdr[] sections = parseSections(data, header);
+        for (int shndx = 0; shndx < sections.length; shndx++) {
+            Elf32Shdr section = sections[shndx];
+            // if it .text
+            if (section.shType() == Elf32ShdrType.SHT_PROGBITS && (section.shFlags() & Elf32ShdrFlag.SHF_ALLOC) != 0
+                    && (section.shFlags() & Elf32ShdrFlag.SHF_EXECINSTR) != 0) {
+                for (var entry : placementOffset.entrySet()) {
+                    if (entry.getKey().ownerShndx() == shndx && entry.getKey().fileIdx() == fileIdx) {
+                        entry.setValue(entry.getValue() + cursor);
+                    }
+                }
+                int offset = (int) section.shOffset();
+                for (int i = offset; i < section.shSize() + offset; i++, cursor++) {
+                    out[cursor] = data[i];
+                }
+            }
+        }
+        return cursor;
     }
 
     public static void main(String[] args) throws IOException {
+        Map<Placement, Long> placementOffset = new HashMap<>();
+        int fileIdx = 0;
         try (Stream<Path> paths = Files.walk(Paths.get("binaries"))) {
             for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
                 Path path = it.next();
                 if (!Files.isRegularFile(path)) continue;
 
                 byte[] data = Files.readAllBytes(path);
-                link(data);
+                fillPlacementOffset(data, placementOffset, fileIdx);
+                fileIdx++;
             }
         }
     }
@@ -74,6 +122,18 @@ public class Linker {
                 | ((long) (b[off + 1] & 0xFF) << 8)
                 | ((long) (b[off + 2] & 0xFF) << 16)
                 | ((long) (b[off + 3] & 0xFF) << 24);
+    }
+
+    private static void writeUInt16LE(byte[] b, int off, int value) {
+        b[off] = (byte) (value & 0xFF);
+        b[off + 1] = (byte) ((value >>> 8) & 0xFF);
+    }
+
+    private static void writeUInt32LE(byte[] b, int off, long value) {
+        b[off] = (byte) (value & 0xFF);
+        b[off + 1] = (byte) ((value >>> 8)  & 0xFF);
+        b[off + 2] = (byte) ((value >>> 16) & 0xFF);
+        b[off + 3] = (byte) ((value >>> 24) & 0xFF);
     }
 
     private static String readCString(byte[] buf, int start) {
@@ -94,5 +154,7 @@ public class Linker {
         System.arraycopy(file, off, out, 0, size);
         return out;
     }
+
+    private record Placement(int ownerShndx, int fileIdx, String symbol) {}
 
 }
