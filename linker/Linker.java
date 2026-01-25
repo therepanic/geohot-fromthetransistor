@@ -2,9 +2,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class Linker {
@@ -48,7 +46,22 @@ public class Linker {
         return sections;
     }
 
-    private static void fillPlacementOffset(byte[] data, Map<Placement, Long> placementOffset, int fileIdx) {
+    private static long getTextSize(byte[] data) {
+        Elf32Ehdr header = parseHeader(data);
+        Elf32Shdr[] sections = parseSections(data, header);
+        long size = 0;
+        for (int shndx = 0; shndx < sections.length; shndx++) {
+            Elf32Shdr section = sections[shndx];
+            // if it .text
+            if (section.shType() == Elf32ShdrType.SHT_PROGBITS && (section.shFlags() & Elf32ShdrFlag.SHF_ALLOC) != 0
+                    && (section.shFlags() & Elf32ShdrFlag.SHF_EXECINSTR) != 0) {
+                size += section.shSize();
+            }
+        }
+        return size;
+    }
+
+    private static void fillPlacementOffset(byte[] data, Map<Placement, Long> placementOffset, Set<String> addedRelocs, int fileIdx) {
         Elf32Ehdr header = parseHeader(data);
         Elf32Shdr[] sections = parseSections(data, header);
         for (Elf32Shdr section : sections) {
@@ -65,9 +78,17 @@ public class Linker {
                     long stOther = data[offset] & 0xFF; offset++;
                     int stShndx = readUInt16LE(data, offset); offset += 2;
 
+                    String name = readCString(strtab, (int) stName);
+                    if (name.startsWith("$")) continue;
+
                     if (stShndx != Elf32ShdrIndex.SHN_UNDEF) {
-                        if (stShndx <= 0 || stShndx >= sections.length || stName == 0) continue;
-                        placementOffset.put(new Placement(stShndx, fileIdx, readCString(strtab, (int) stName)), stValue);
+                        if (stShndx >= 0xFF00 || stShndx >= sections.length || stName == 0 || addedRelocs.contains(name)) continue;
+                        Elf32Shdr symSection = sections[stShndx];
+                        if ((symSection.shFlags() & Elf32ShdrFlag.SHF_EXECINSTR) != 0) {
+                            addedRelocs.add(name);
+                            Placement placement = new Placement(stShndx, fileIdx, name);
+                            placementOffset.put(placement, stValue);
+                        }
                     }
                 }
             }
@@ -96,21 +117,57 @@ public class Linker {
         return cursor;
     }
 
-    public static void main(String[] args) throws IOException {
-        Map<Placement, Long> placementOffset = new HashMap<>();
-        int fileIdx = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries"))) {
+    private static long getTextsSize() throws IOException {
+        long textSize = 0;
+        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
             for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
                 Path path = it.next();
                 if (!Files.isRegularFile(path)) continue;
 
                 byte[] data = Files.readAllBytes(path);
-                fillPlacementOffset(data, placementOffset, fileIdx);
+                textSize += getTextSize(data);
+            }
+        }
+        return textSize;
+    }
+
+    private static byte[] buildOutText(Map<Placement, Long> placementOffset, Set<String> addedRelocs) throws IOException {
+        long textSize = getTextsSize();
+        byte[] outText = new byte[(int) textSize];
+        int fileIdx = 0;
+        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
+            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
+                Path path = it.next();
+                if (!Files.isRegularFile(path)) continue;
+
+                byte[] data = Files.readAllBytes(path);
+                fillPlacementOffset(data, placementOffset, addedRelocs, fileIdx);
                 fileIdx++;
             }
         }
+        fileIdx = 0;
+        int cursor = 0;
+        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
+            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
+                Path path = it.next();
+                if (!Files.isRegularFile(path)) continue;
+
+                byte[] data = Files.readAllBytes(path);
+                cursor = buildOutText(data, outText, cursor, placementOffset, fileIdx);
+                fileIdx++;
+            }
+        }
+        return outText;
     }
 
+
+    public static void main(String[] args) throws IOException {
+        Map<Placement, Long> placementOffset = new HashMap<>();
+        Set<String> addedRelocs = new HashSet<>();
+        byte[] outText = buildOutText(placementOffset, addedRelocs);
+        System.out.println(placementOffset);
+        System.out.println(Arrays.toString(outText));
+    }
 
     // Helpers
     private static int readUInt16LE(byte[] b, int off) {
@@ -154,7 +211,5 @@ public class Linker {
         System.arraycopy(file, off, out, 0, size);
         return out;
     }
-
-    private record Placement(int ownerShndx, int fileIdx, String symbol) {}
 
 }
