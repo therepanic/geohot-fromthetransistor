@@ -1,2 +1,2 @@
-public record SectionBase(long dataBase, long textBase, long bssBase) {
+public record SectionBase(long textBase, long dataBase, long bssBase) {
 }

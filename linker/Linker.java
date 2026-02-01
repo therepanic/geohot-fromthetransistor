@@ -190,102 +190,60 @@ public class Linker {
         return cursor;
     }
 
-    private static long getTextsSize() throws IOException {
+    private static long getTextsSize(List<byte[]> binaries) throws IOException {
         long textSize = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                textSize += getTextSize(data);
-            }
+        for (byte[] data : binaries) {
+            textSize += getTextSize(data);
         }
         return textSize;
     }
 
-    private static long getDataSize() throws IOException {
-        long textSize = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                textSize += getDataSize(data);
-            }
+    private static long getDataSize(List<byte[]> binaries) throws IOException {
+        long dataSize = 0;
+        for (byte[] data : binaries) {
+            dataSize += getDataSize(data);
         }
-        return textSize;
+        return dataSize;
     }
 
-    private static long getBssSize() throws IOException {
-        long textSize = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                textSize += getBssSize(data);
-            }
+    private static long getBssSize(List<byte[]> binaries) throws IOException {
+        long bssSize = 0;
+        for (byte[] data : binaries) {
+            bssSize += getBssSize(data);
         }
-        return textSize;
+        return bssSize;
     }
 
-    private static byte[] buildOutText(Map<Placement, Long> placementOffset, Set<String> addedRelocs) throws IOException {
-        long textSize = getTextsSize();
+    private static byte[] buildOutText(List<byte[]> binaries, Map<Placement, Long> placementOffset, Set<String> addedRelocs) throws IOException {
+        long textSize = getTextsSize(binaries);
         byte[] outText = new byte[(int) textSize];
         int fileIdx = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                fillPlacementOffset(data, placementOffset, addedRelocs, fileIdx);
-                fileIdx++;
-            }
+        for (byte[] data : binaries) {
+            fillPlacementOffset(data, placementOffset, addedRelocs, fileIdx);
+            fileIdx++;
         }
         fileIdx = 0;
         int cursor = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                cursor = buildOutText(data, outText, cursor, placementOffset, fileIdx);
-                fileIdx++;
-            }
+        for (byte[] data : binaries) {
+            cursor = buildOutText(data, outText, cursor, placementOffset, fileIdx);
+            fileIdx++;
         }
         return outText;
     }
 
-    private static byte[] buildOutData(Map<Placement, Long> placementOffset, Set<String> addedRelocs) throws IOException {
-        long dataSize = getDataSize();
+    private static byte[] buildOutData(List<byte[]> binaries, Map<Placement, Long> placementOffset, Set<String> addedRelocs) throws IOException {
+        long dataSize = getDataSize(binaries);
         byte[] outData = new byte[(int) dataSize];
         int fileIdx = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                fillPlacementOffset(data, placementOffset, addedRelocs, fileIdx);
-                fileIdx++;
-            }
+        for (byte[] data : binaries) {
+            fillPlacementOffset(data, placementOffset, addedRelocs, fileIdx);
+            fileIdx++;
         }
         fileIdx = 0;
         int cursor = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                cursor = buildOutData(data, outData, cursor, placementOffset, fileIdx);
-                fileIdx++;
-            }
+        for (byte[] data : binaries) {
+            cursor = buildOutData(data, outData, cursor, placementOffset, fileIdx);
+            fileIdx++;
         }
         return outData;
     }
@@ -294,7 +252,6 @@ public class Linker {
         for (Elf32Shdr section : sections) {
             // if it symtab
             if (section.shType() == Elf32ShdrType.SHT_SYMTAB) {
-                byte[] strtab = readSectionBytes(data, sections[(int) section.shLink()]);
                 Elf32Sym[] symbols = new Elf32Sym[(int) (section.shSize() / section.shEntsize())];
                 for (int i = 0; i < symbols.length; i++) {
                     int offset = (int) (section.shOffset() + i * section.shEntsize());
@@ -327,6 +284,7 @@ public class Linker {
         for (Elf32Shdr section : sections) {
             // if it reloc
             if (section.shType() == Elf32ShdrType.SHT_REL) {
+                Elf32Shdr targetSection = sections[(int) section.shInfo()];
                 for (int i = 0; i < section.shSize() / section.shEntsize(); i++) {
                     int offset = (int) (section.shOffset() + i * section.shEntsize());
 
@@ -337,8 +295,8 @@ public class Linker {
                     Elf32Sym sym = entry.symbols()[symIdx];
 
                     int type = (int) (rInfo & 0xFF);
-                    long realOffset = getSectionBase(section, sectionBase) + rOffset;
-                    boolean isTextReloc = (section.shFlags() & Elf32ShdrFlag.SHF_EXECINSTR) != 0;
+                    long realOffset = getSectionBase(targetSection, sectionBase) + rOffset;
+                    boolean isTextReloc = (targetSection.shFlags() & Elf32ShdrFlag.SHF_EXECINSTR) != 0;
                     switch (type) {
                         case RelocType.R_ARM_CALL, RelocType.R_ARM_JUMP24, RelocType.R_ARM_ABS32,
                              RelocType.R_ARM_MOVW_ABS_NC, RelocType.R_ARM_MOVT_ABS, RelocType.R_ARM_REL32 ->
@@ -391,42 +349,32 @@ public class Linker {
 
 
     public static void main(String[] args) throws IOException {
+        List<byte[]> binaries = collectBinariesBytes();
         Map<Placement, Long> placementOffset = new HashMap<>();
         Set<String> addedRelocs = new HashSet<>();
-        byte[] outText = buildOutText(placementOffset, addedRelocs);
-        byte[] outData = buildOutData(placementOffset, addedRelocs);
-        long bssSize = getBssSize();
+        byte[] outText = buildOutText(binaries, placementOffset, addedRelocs);
+        byte[] outData = buildOutData(binaries, placementOffset, addedRelocs);
+        long bssSize = getBssSize(binaries);
         List<SectionBase> fileBases = new ArrayList<>();
         long textCursor = 0;
         long dataCursor = 0;
         long bssCursor = 0;
         int fileIdx = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
+        for (byte[] data : binaries) {
+            fileBases.add(new SectionBase(textCursor, dataCursor, bssCursor));
 
-                byte[] data = Files.readAllBytes(path);
-                fileBases.add(new SectionBase(textCursor, dataCursor, bssCursor));
+            textCursor += getTextSize(data);
+            dataCursor += getDataSize(data);
+            bssCursor += getBssSize(data);
 
-                textCursor += getTextSize(data);
-                dataCursor += getDataSize(data);
-                bssCursor += getBssSize(data);
-
-                fileIdx++;
-            }
+            fileIdx++;
         }
+
         List<Relocation> relocs = new ArrayList<>();
         fileIdx = 0;
-        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
-            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
-                Path path = it.next();
-                if (!Files.isRegularFile(path)) continue;
-
-                byte[] data = Files.readAllBytes(path);
-                collectReloc(data, relocs, fileBases.get(fileIdx));
-                fileIdx++;
-            }
+        for (byte[] data : binaries) {
+            collectReloc(data, relocs, fileBases.get(fileIdx));
+            fileIdx++;
         }
         long TEXT_BASE = 0x10000;
         long DATA_BASE = TEXT_BASE + outText.length;
@@ -434,21 +382,42 @@ public class Linker {
         for (Relocation relo : relocs) {
             int patchPos = (int) relo.rel().rOffset();
             long symbolOffset = findSymbolOffset(relo.name(), placementOffset);
-            long targetAddr = symbolToAbsoluteAddr(relo.name(), symbolOffset, TEXT_BASE, DATA_BASE, BSS_BASE, placementOffset);
+            long symbolAddr = symbolToAbsoluteAddr(relo.name(), symbolOffset, TEXT_BASE, DATA_BASE, BSS_BASE, placementOffset);
             int type = (int) (relo.rel().rInfo() & 0xFF);
             byte[] targetBuf = relo.isTextReloc() ? outText : outData;
             switch (type) {
                 case RelocType.R_ARM_CALL, RelocType.R_ARM_JUMP24 -> {
                     long instr = readUInt32LE(targetBuf, patchPos);
                     long pcAddr = TEXT_BASE + patchPos + 8;
-                    long offset = (targetAddr - pcAddr) / 4;
+                    long offset = (symbolAddr - pcAddr) / 4;
                     instr = (instr & 0xFF000000L) | (offset & 0x00FFFFFF);
-                    writeUInt16LE(targetBuf, patchPos, (int) instr);
+                    writeUInt32LE(targetBuf, patchPos, (int) instr);
                 }
                 case RelocType.R_ARM_ABS32 -> {
-                    writeUInt32LE(targetBuf, patchPos, targetAddr);
-
+                    writeUInt32LE(targetBuf, patchPos, symbolAddr);
                 }
+                case RelocType.R_ARM_MOVW_ABS_NC, RelocType.R_ARM_MOVT_ABS -> {
+                    int value16 = (int) (symbolAddr >> (type == RelocType.R_ARM_MOVT_ABS ? 16 : 0)) & 0xFFFF;
+                    int imm4 = (value16 >> 12) & 0xF;
+                    int imm12 = value16 & 0xFFF;
+                    long instr = readUInt32LE(targetBuf, patchPos);
+                    instr &= 0xFFF0F000L;
+                    instr |= (imm4 << 16);
+                    instr |= imm12;
+                    writeUInt32LE(targetBuf, patchPos, (int) instr);
+                }
+                case RelocType.R_ARM_REL32 -> {
+                    int addend = (int) readUInt32LE(targetBuf, patchPos);
+                    long pcAddr;
+                    if (relo.isTextReloc()) {
+                        pcAddr = TEXT_BASE + patchPos;
+                    } else {
+                        pcAddr = DATA_BASE + patchPos;
+                    }
+                    long offset = (symbolAddr + addend) - pcAddr;
+                    writeUInt32LE(targetBuf, patchPos, (int) offset);
+                }
+
             }
         }
     }
@@ -466,12 +435,14 @@ public class Linker {
                                        Map<Placement, Long> placementOffset) {
         for (var entry : placementOffset.entrySet()) {
             Placement p = entry.getKey();
-            if (p.sectionType().equals(SectionType.TEXT)) {
-                return textBase + offset;
-            } else if (p.sectionType().equals(SectionType.DATA)) {
-                return dataBase + offset;
-            } else if (p.sectionType().equals(SectionType.BSS)) {
-                return bssBase + offset;
+            if (p.symbol().equals(name)) {
+                if (p.sectionType().equals(SectionType.TEXT)) {
+                    return textBase + offset;
+                } else if (p.sectionType().equals(SectionType.DATA)) {
+                    return dataBase + offset;
+                } else if (p.sectionType().equals(SectionType.BSS)) {
+                    return bssBase + offset;
+                }
             }
         }
         throw new IllegalStateException("Undefined symbol: " + name);
@@ -518,6 +489,22 @@ public class Linker {
         byte[] out = new byte[size];
         System.arraycopy(file, off, out, 0, size);
         return out;
+    }
+
+    private static List<byte[]> collectBinariesBytes() {
+        List<byte[]> binaries = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(Paths.get("binaries")).sorted()) {
+            for (Iterator<Path> it = paths.iterator(); it.hasNext();) {
+                Path path = it.next();
+                if (!Files.isRegularFile(path)) continue;
+
+                byte[] data = Files.readAllBytes(path);
+                binaries.add(data);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return binaries;
     }
 
 }
