@@ -9,6 +9,7 @@
 .text
 .global use_relocs
 use_relocs:
+    push {r4, r6, r7, lr}
     bl call_f
 
     movw r4, #:lower16:p
@@ -22,6 +23,7 @@ use_relocs:
     cmp r7, r4
     moveq r0, #42
     movne r0, #13
+    pop {r4, r6, r7, lr}
     bx lr
 
 .data
