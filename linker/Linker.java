@@ -35,19 +35,23 @@ public class Linker {
             collectReloc(data, relocs, fileBases.get(fileIdx));
             fileIdx++;
         }
-        long TEXT_BASE = 0x1000;
-        long DATA_BASE = alignUp(TEXT_BASE + outText.length, 0x1000);
-        long BSS_BASE = DATA_BASE + outData.length;
+        int BASE_VADDR = 0x10000;
+        long TEXT_OFF  = 0x1000;
+        long DATA_OFF  = alignUp(TEXT_OFF + outText.length, 0x1000);
+        long BSS_OFF   = DATA_OFF + outData.length;
+        long TEXT_VMA = BASE_VADDR + TEXT_OFF;
+        long DATA_VMA = BASE_VADDR + DATA_OFF;
+        long BSS_VMA  = BASE_VADDR + BSS_OFF;
         for (Relocation relo : relocs) {
             int patchPos = (int) relo.rel().rOffset();
             long symbolOffset = findSymbolOffset(relo.name(), placementOffset);
-            long symbolAddr = symbolToAbsoluteAddr(relo.name(), symbolOffset, TEXT_BASE, DATA_BASE, BSS_BASE, placementOffset);
+            long symbolAddr = symbolToAbsoluteAddr(relo.name(), symbolOffset, TEXT_VMA, DATA_VMA, BSS_VMA, placementOffset);
             int type = (int) (relo.rel().rInfo() & 0xFF);
             byte[] targetBuf = relo.isTextReloc() ? outText : outData;
             switch (type) {
                 case RelocType.R_ARM_CALL, RelocType.R_ARM_JUMP24 -> {
                     long instr = readUInt32LE(targetBuf, patchPos);
-                    long pcBase = relo.isTextReloc() ? TEXT_BASE : DATA_BASE;
+                    long pcBase = relo.isTextReloc() ? TEXT_VMA : DATA_VMA;
                     long pcAddr = pcBase + patchPos + 8;
                     long offset = (symbolAddr - pcAddr) / 4;
                     instr = (instr & 0xFF000000L) | (offset & 0x00FFFFFF);
@@ -70,19 +74,18 @@ public class Linker {
                     int addend = (int) readUInt32LE(targetBuf, patchPos);
                     long pcAddr;
                     if (relo.isTextReloc()) {
-                        pcAddr = TEXT_BASE + patchPos;
+                        pcAddr = TEXT_VMA + patchPos;
                     } else {
-                        pcAddr = DATA_BASE + patchPos;
+                        pcAddr = DATA_VMA + patchPos;
                     }
                     long offset = (symbolAddr + addend) - pcAddr;
                     writeUInt32LE(targetBuf, patchPos, (int) offset);
                 }
             }
         }
-        int textOffset = (int) TEXT_BASE;
-        int dataOffset = (int) DATA_BASE;
+        int textOffset = (int) TEXT_OFF;
+        int dataOffset = (int) DATA_OFF;
         byte[] output = new byte[dataOffset + outData.length];
-        int BASE_VADDR = 0x10000;
         int PAGE = 0x1000;
         fillMagic(output);
         fillElfHeader(output, BASE_VADDR, textOffset, placementOffset);
